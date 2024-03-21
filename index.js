@@ -443,7 +443,7 @@ var chimneyLayer = L.geoJSON([], {
 
 
 // Initialize the map + set active overlays
-var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLayer, cellTowerLayer, turbineLayer, chimneyLayer] }).fitWorld();
+var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLayer, turbineLayer, chimneyLayer] }).fitWorld();
 
 // Request location of device and set view to location
 map.locate({ setView: true, maxZoom: 16 });
