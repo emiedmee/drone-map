@@ -9,23 +9,12 @@ const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datas
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const BIPT_URL = "https://www.sites.bipt.be/ajaxinterface.php"; // method: POST; body: action=getSites&latfrom=51.02670680117774&latto=51.06863331870643&longfrom=3.6838944547166808&longto=3.8242276303758604&LangSiteTable=sitesnl
 
-const BBOX_1 = "50.741655,2.639454,51.385570,5.773308"; // flanders
-const BBOX_2 = "50.488948,3.243720,50.741655,6.111214"; // wallonia 1
-const BBOX_3 = "50.320909,3.685905,50.488948,6.349983"; // wallonia 2
-const BBOX_4 = "50.021824,4.169082,50.320909,5.899796"; // wallonia 3
-const BBOX_5 = "49.791904,4.872416,50.021824,5.800807"; // wallonia 4
-const BBOX_6 = "49.530545,5.215733,49.791904,5.872159"; // wallonia 5
 
-
-function buildOverpassQuery(n, k, v) {
-    const q = "[maxsize:16Mi];("
-        + `${n}["${k}"="${v}"](${BBOX_1});`
-        + `${n}["${k}"="${v}"](${BBOX_2});`
-        + `${n}["${k}"="${v}"](${BBOX_3});`
-        + `${n}["${k}"="${v}"](${BBOX_4});`
-        + `${n}["${k}"="${v}"](${BBOX_5});`
-        + `${n}["${k}"="${v}"](${BBOX_6});`
-        + ");out geom;";
+function buildOverpassQuery(nwr, filter) {
+    const q = "[maxsize:16Mi][timeout:30];"
+        + 'area["name"="België / Belgique / Belgien"]->.belgie;'
+        + `${nwr}${filter}(area.belgie);`
+        + "out geom;";
 
     return "data=" + encodeURIComponent(q);
 }
@@ -141,7 +130,7 @@ function renderGeoZone(geozone) {
 
             // the interval stops after the window starts
             // and start before the window ends
-            // and is in the futur
+            // and is in the future
             if ((end >= sp_temp) && (begin <= ep_temp) && (nowNumberFull <= end)) {
                 intervalInWindow = true;
             }
@@ -151,7 +140,6 @@ function renderGeoZone(geozone) {
                 return "Active";
             }
         }
-
     }
 
     // never interval in windows?
@@ -257,6 +245,7 @@ function pointToLayerMulti(geoJsonPoint, latlng) {
 
 async function getNotams() {
     const response = await (await fetch(NOTAM_URL)).json();
+
     return response;
 }
 
@@ -271,20 +260,21 @@ async function getRailways() {
     const response = await (await fetch(RAILWAY_URL)).json();
     railwayLayer.addData(response);
 
+    return response;
 }
 
 async function getHighVoltageLines() {
-    const q = buildOverpassQuery("way", "power", "line");
+    const q = buildOverpassQuery("way", '["power"="line"]');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
 
     const geojson = osm2geojson(response);
-    lineLayer.addData(geojson);
+    highVoltageLayer.addData(geojson);
 
     return geojson;
 }
 
 async function getWindTurbines() {
-    const q = buildOverpassQuery("node", "generator:source", "wind");
+    const q = buildOverpassQuery("node", '["generator:source"="wind"]');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
 
     const geojson = osm2geojson(response);
@@ -294,20 +284,27 @@ async function getWindTurbines() {
 }
 
 async function getCellTowers() {
-    // TODO
-    var q = "action=getSites&latfrom=50.568300114956294&latto=50.73743144242077&longfrom=4.368285909920697&longto=4.929618612557416&LangSiteTable=sitesnl";
-    var response;
-    const res = await (await fetch(BIPT_URL, { method: "POST", body: q })).text();
-    // response = res.body;
-    // console.log(res);
-    // console.log(res.blob());
+    const q = buildOverpassQuery("node", '["ref:BE:BIPT"]');
+    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
 
-    // return Promise.reject("getCellTowers() not yet implemented");
-    return res;
+    const geojson = osm2geojson(response);
+    cellTowerLayer.addData(geojson);
+
+    return geojson;
+    // // TODO
+    // var q = "action=getSites&latfrom=50.568300114956294&latto=50.73743144242077&longfrom=4.368285909920697&longto=4.929618612557416&LangSiteTable=sitesnl";
+    // var response;
+    // const res = await (await fetch(BIPT_URL, { method: "POST", body: q })).text();
+    // // response = res.body;
+    // // console.log(res);
+    // // console.log(res.blob());
+
+    // // return Promise.reject("getCellTowers() not yet implemented");
+    // return res;
 }
 
 async function getChimneys() {
-    const q = buildOverpassQuery("node", "man_made", "chimney");
+    const q = buildOverpassQuery("node", '["man_made"="chimney"]');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
 
     const geojson = osm2geojson(response);
@@ -425,7 +422,7 @@ var geozoneLayer = L.geoJSON([], {
 var railwayLayer = L.geoJSON([], {
     style: styleRailway
 });
-var lineLayer = L.geoJSON([], {
+var highVoltageLayer = L.geoJSON([], {
     style: styleHighVoltage
 });
 var cellTowerLayer = L.geoJSON([], {
@@ -440,7 +437,7 @@ var chimneyLayer = L.geoJSON([], {
 
 
 // Initialize the map + set active overlays
-var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, lineLayer, cellTowerLayer, turbineLayer, chimneyLayer] }).fitWorld();
+var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLayer, cellTowerLayer, turbineLayer, chimneyLayer] }).fitWorld();
 
 // Request location of device and set view to location
 map.locate({ setView: true, maxZoom: 16 });
@@ -457,7 +454,7 @@ var baseMaps = {
 var overlayMaps = {
     "Railways": railwayLayer,
     "No-Fly Zones": geozoneLayer,
-    "High-Voltage Lines": lineLayer,
+    "High-Voltage Lines": highVoltageLayer,
     "Cell Towers": cellTowerLayer,
     "Wind Turbines": turbineLayer,
     "Chimneys": chimneyLayer,
@@ -512,24 +509,6 @@ getChimneys().then(
     (value) => { console.log("Successfully got chimneys"); },
     (error) => { console.log("Error getting chimneys:", error); }
 );
-
-/*
-tower:type=communication
-    man_made=tower
-    man_made=mast
- 
-man_made=antenna
-man_made=chimney
-    chimney.svg
-man_made=communications_tower
-    communication_tower.svg
-    (man_made=mast + tower:type=communication)
-    (man_made=tower + tower:type=communication)
-man_made=mast
-    mast.svg
-man_made=tower
-    tower.svg
-*/
 
 
 //////////
