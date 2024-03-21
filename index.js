@@ -20,20 +20,21 @@ function buildOverpassQuery(nwr, filter) {
 }
 
 
+// Functions to render objects
 function renderGeoZone(geozone) {
     // script return the correct symbology for the geozones
-    const fp = geozone.properties;
+    const props = geozone.properties;
 
     // get the feature fields - and their split list
-    var d = fp.TimeField;
+    var d = props.TimeField;
     var s = d.split(';');
 
-    var startingPoint = fp.writtenStartTimeGeneral;
+    var startingPoint = props.writtenStartTimeGeneral;
     if (startingPoint.length == 0 || startingPoint == null)
         startingPoint = "000000";
     var sP_split = startingPoint.split(';');
 
-    var endingPoint = fp.writtenEndTimeGeneral;
+    var endingPoint = props.writtenEndTimeGeneral;
     if (endingPoint.length == 0 || endingPoint == null)
         endingPoint = "235959";
     var eP_split = endingPoint.split(';');
@@ -153,15 +154,15 @@ function filterGeozone(geozone, layer) {
     var show = false;
 
     if (geozone.properties) {
-        const f_p = geozone.properties;
+        const props = geozone.properties;
 
         // Filter out geozones with lower limit above 1200 ft / 400 m OR 410 ft / 125 m
-        if (f_p.lowerAltitudeUnit) {
-            if (f_p.lowerAltitudeUnit == "ft") {
-                if (f_p.lowerLimit <= 410) // ft
+        if (props.lowerAltitudeUnit) {
+            if (props.lowerAltitudeUnit == "ft") {
+                if (props.lowerLimit <= 410) // ft
                     show = true;
             } else {
-                if (f_p.lowerLimit <= 125) // m
+                if (props.lowerLimit <= 125) // m
                     show = true;
             }
         }
@@ -180,10 +181,10 @@ function filterGeozone(geozone, layer) {
         //         if (notam.attributes) {
         //             const n_a = notam.attributes;
         //             if (n_a.location && n_a.location == "EBBU") {
-        //                 if (n_a.notamText && f_p.name.includes(n_a.notamText.split('-')[0].trim()))
+        //                 if (n_a.notamText && props.name.includes(n_a.notamText.split('-')[0].trim()))
         //                     return true; // early return because geozone is active by NOTAM
         //             } else {
-        //                 if (n_a.location && f_p.code && n_a.location == f_p.code)
+        //                 if (n_a.location && props.code && n_a.location == props.code)
         //                     return true; // early return because geozone is active by NOTAM
         //             }
         //         }
@@ -196,11 +197,11 @@ function filterGeozone(geozone, layer) {
 
 function onEachGeozone(feature, layer) {
     if (feature.properties) {
-        const f_p = feature.properties;
-        layer.bindPopup(`${f_p.name}<br>Lower limit: ${parseInt(f_p.lowerLimit).toFixed(0)} ${f_p.lowerAltitudeUnit}<br>`
-            + `Upper limit: ${parseInt(f_p.upperLimit).toFixed(0)} ${f_p.upperAltitudeUnit}`);
+        const props = feature.properties;
+        layer.bindPopup(`${props.name}<br>Lower limit: ${parseInt(props.lowerLimit).toFixed(0)} ${props.lowerAltitudeUnit}<br>`
+            + `Upper limit: ${parseInt(props.upperLimit).toFixed(0)} ${props.upperAltitudeUnit}`);
         // TODO: order based on Shape__Area
-        // layer.setZIndex(f_p.Shape__Area);
+        // layer.setZIndex(props.Shape__Area);
     }
 }
 
@@ -212,37 +213,41 @@ function styleGeozone(feature) {
     }
 }
 
-// function pointToLayerTurbine(geoJsonPoint, latlng) {
-//     return L.marker(latlng, { icon: windTurbineIcon });
-// }
+function onEachRailway(feature, layer) {
+    if (feature.properties) {
+        const props = feature.properties;
+        layer.bindPopup(`Line: ${props.label}`);
+    }
+}
 
-// function pointToLayerCellTower(geoJsonPoint, latlng) {
-//     return L.marker(latlng, { icon: cellTowerIcon });
-// }
+function pointToLayerTurbine(geoJsonPoint, latlng) {
+    return L.marker(latlng, { icon: windTurbineIcon });
+}
 
-// function pointToLayerChimney(geoJsonPoint, latlng) {
-//     return L.marker(latlng, { icon: chimneyIcon });
-// }
-
-function pointToLayerMulti(geoJsonPoint, latlng) {
+function pointToLayerCellTower(geoJsonPoint, latlng) {
+    console.log(geoJsonPoint);
+    var marker = L.marker(latlng, { icon: cellTowerIcon });
     if (geoJsonPoint.properties) {
-        const g_p = geoJsonPoint.properties;
-        if (g_p["generator:source"] && g_p["generator:source"] == "wind") {
-            // wind turbine
-            return L.marker(latlng, { icon: windTurbineIcon });
-        } else if (g_p.man_made && g_p.man_made == "chimney") {
-            // chimney
-            return L.marker(latlng, { icon: chimneyIcon });
-        } else if (g_p.Adres) {
-            // cell tower
-            return L.marker(latlng, { icon: cellTowerIcon });
+        const props = geoJsonPoint.properties;
+        
+        var text = "Operators:";
+        for (var key in props) {
+            if (key.startsWith("ref:BE:") && key != "ref:BE:BIPT") {
+                text += `<br>- ${key.slice(7)}`
+            }
         }
+        marker.bindPopup(text);
     }
 
-    return L.marker(latlng);
+    return marker;
+}
+
+function pointToLayerChimney(geoJsonPoint, latlng) {
+    return L.marker(latlng, { icon: chimneyIcon });
 }
 
 
+// Functions to get datasets
 async function getNotams() {
     const response = await (await fetch(NOTAM_URL)).json();
 
@@ -420,19 +425,20 @@ var geozoneLayer = L.geoJSON([], {
     style: styleGeozone
 });
 var railwayLayer = L.geoJSON([], {
+    onEachFeature: onEachRailway,
     style: styleRailway
 });
 var highVoltageLayer = L.geoJSON([], {
     style: styleHighVoltage
 });
 var cellTowerLayer = L.geoJSON([], {
-    pointToLayer: pointToLayerMulti // pointToLayerCellTower
+    pointToLayer: pointToLayerCellTower
 });
 var turbineLayer = L.geoJSON([], {
-    pointToLayer: pointToLayerMulti // pointToLayerTurbine
+    pointToLayer: pointToLayerTurbine
 });
 var chimneyLayer = L.geoJSON([], {
-    pointToLayer: pointToLayerMulti // pointToLayerChimney
+    pointToLayer: pointToLayerChimney
 });
 
 
@@ -462,51 +468,44 @@ var overlayMaps = {
 var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
 
-// Create items for turbine layer
-var turbine = L.marker([51.5, -0.08], { icon: cellTowerIcon });
-turbine.bindPopup("I'm a wind turbine!");
-
-turbineLayer.addLayer(turbine);
-
-
 // Get NOTAM warnings and No-Fly zones
 var NOTAMS;
 getNotams().then(
-    (value) => { console.log("Successfully got NOTAMS"); NOTAMS = value; },
+    (value) => { console.log("Successfully got NOTAMS"); console.debug(value); NOTAMS = value; },
     (error) => { console.log("Error getting NOTAMS:", error); }
 );
 getGeoZones().then(
-    (value) => { console.log("Successfully got no-fly zones"); },
+    (value) => { console.log("Successfully got no-fly zones"); console.debug(value); },
     (error) => { console.log("Error getting no-fly zones:", error); }
 );
 
 // Create items for Railway lines
 getRailways().then(
-    (value) => { console.log("Successfully got railways"); },
+    (value) => { console.log("Successfully got railways"); console.debug(value); },
     (error) => { console.log("Error getting railways:", error); }
 );
 
 // Create items for High-voltage lines
 getHighVoltageLines().then(
-    (value) => { console.log("Successfully got high-voltage lines"); },
+    (value) => { console.log("Successfully got high-voltage lines"); console.debug(value); },
     (error) => { console.log("Error getting high-voltage lines:", error); }
 );
 
 // Create items for Cell towers
 getCellTowers().then(
-    (value) => { console.log("Successfully got cell towers"); console.log(value); },
+    (value) => { console.log("Successfully got cell towers"); console.debug(value); },
     (error) => { console.log("Error getting cell towers:", error); }
 );
 
 // Create items for Wind turbines
 getWindTurbines().then(
-    (value) => { console.log("Successfully got wind turbines"); },
+    (value) => { console.log("Successfully got wind turbines"); console.debug(value); },
     (error) => { console.log("Error getting wind turbines:", error); }
 );
 
 // Create items for Chimneys
 getChimneys().then(
-    (value) => { console.log("Successfully got chimneys"); },
+    (value) => { console.log("Successfully got chimneys"); console.debug(value); },
     (error) => { console.log("Error getting chimneys:", error); }
 );
 
