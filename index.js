@@ -324,6 +324,9 @@ function onEachCellTower(feature, layer) {
         const props = feature.properties;
 
         text += "<br/>Operators:";
+        if (props["communication:gsm-r"] && props["operator"]) {
+            text += `<br>- ${props.operator}`;
+        }
         for (var key in props) {
             if (key.startsWith("ref:BE:") && key != "ref:BE:BIPT") {
                 text += `<br>- ${key.slice(7)}`
@@ -413,7 +416,7 @@ async function getHighVoltageLines() {
 }
 
 async function getCellTowers() {
-    const q = buildOverpassQuery("node", '["ref:BE:BIPT"]');
+    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:30]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); ); out geom;');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
 
     const geojson = osm2geojson(response);
