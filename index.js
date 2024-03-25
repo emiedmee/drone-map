@@ -9,6 +9,23 @@ const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datas
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const BIPT_URL = "https://www.sites.bipt.be/ajaxinterface.php"; // method: POST; body: action=getSites&latfrom=51.02670680117774&latto=51.06863331870643&longfrom=3.6838944547166808&longto=3.8242276303758604&LangSiteTable=sitesnl
 
+
+const NOTAM_CACHE = "notam-cache";
+const NOTAM_CACHE_TIME = 1; // 1D
+const GEOZONE_CACHE = "geozone-cache";
+const GEOZONE_CACHE_TIME = 1; // 1D
+const RAILWAY_CACHE = "railway-cache";
+const RAILWAY_CACHE_TIME = 56; // 2M
+const HIGH_VOLTAGE_LINE_CACHE = "high-voltage-line-cache";
+const HIGH_VOLTAGE_LINE_CACHE_TIME = 56; // 2M
+const CELL_TOWER_CACHE = "cell-tower-cache";
+const CELL_TOWER_CACHE_TIME = 28; // 1M
+const WIND_TURBINE_CACHE = "wind-turbine-cache";
+const WIND_TURBINE_CACHE_TIME = 84; // 3M
+const CHIMNEY_CACHE = "chimney-cache";
+const CHIMNEY_CACHE_TIME = 84; // 3M
+
+
 // Create custom icons
 const iconCellTower = L.divIcon({
     iconSize: [60, 60],
@@ -151,15 +168,17 @@ function renderGeoZone(geozone) {
 
     // get the feature fields - and their split list
     var d = props.TimeField;
-    var s = d.split(';');
+    var s = null;
+    if (d)
+        s = d.split(';');
 
     var startingPoint = props.writtenStartTimeGeneral;
-    if (startingPoint.length == 0 || startingPoint == null)
+    if (startingPoint == null || startingPoint.length == 0)
         startingPoint = "000000";
     var sP_split = startingPoint.split(';');
 
     var endingPoint = props.writtenEndTimeGeneral;
-    if (endingPoint.length == 0 || endingPoint == null)
+    if (endingPoint == null || endingPoint.length == 0)
         endingPoint = "235959";
     var eP_split = endingPoint.split(';');
 
@@ -199,7 +218,7 @@ function renderGeoZone(geozone) {
 
     // Assign the correct symbology to the geozone
     // Check if timeField is empty 
-    if (d.length == 0 || d == null || d == "Non Active")
+    if (d == null || d.length == 0 || d == "Non Active")
         return "Non Active";
     // check if nowTime is over the last end time
     if (nowNumberFull > eP_split)//[eP_split.length - 1])
@@ -209,7 +228,7 @@ function renderGeoZone(geozone) {
     // either in 'large window' (Active)
     // Will get to it later in the day (Become Active)
 
-    if (d == "permanent") {
+    if (d && d == "permanent") {
         // check if nowTime is in one of the interval
         for (var sp in sP_split) {
             var sp_temp = sP_split[sp];
@@ -375,87 +394,6 @@ function pointToLayerChimney(feature, latlng) {
 }
 
 
-// Functions to get datasets
-function buildOverpassQuery(nwr, filter) {
-    const q = "[maxsize:16Mi][timeout:30];"
-        + 'area["name"="België / Belgique / Belgien"]->.belgie;'
-        + `${nwr}${filter}(area.belgie);`
-        + "out geom;";
-
-    return "data=" + encodeURIComponent(q);
-}
-
-async function getNotams() {
-    const response = await (await fetch(NOTAM_URL)).json();
-
-    return response;
-}
-
-async function getGeoZones() {
-    const response = await (await fetch(GEOZONE_URL)).json();
-    geozoneLayer.addData(response);
-
-    return response;
-}
-
-async function getRailways() {
-    const response = await (await fetch(RAILWAY_URL)).json();
-    railwayLayer.addData(response);
-
-    return response;
-}
-
-async function getHighVoltageLines() {
-    const q = buildOverpassQuery("way", '["power"="line"]');
-    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-
-    const geojson = osm2geojson(response);
-    highVoltageLineLayer.addData(geojson);
-
-    return geojson;
-}
-
-async function getCellTowers() {
-    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:30]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); ); out geom;');
-    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-
-    const geojson = osm2geojson(response);
-    cellTowerLayer.addData(geojson);
-
-    return geojson;
-    // // TODO
-    // var q = "action=getSites&latfrom=50.568300114956294&latto=50.73743144242077&longfrom=4.368285909920697&longto=4.929618612557416&LangSiteTable=sitesnl";
-    // var response;
-    // const res = await (await fetch(BIPT_URL, { method: "POST", body: q })).text();
-    // // response = res.body;
-    // // console.log(res);
-    // // console.log(res.blob());
-
-    // // return Promise.reject("getCellTowers() not yet implemented");
-    // return res;
-}
-
-async function getWindTurbines() {
-    const q = buildOverpassQuery("node", '["generator:source"="wind"]');
-    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-
-    const geojson = osm2geojson(response);
-    windTurbineLayer.addData(geojson);
-
-    return geojson;
-}
-
-async function getChimneys() {
-    const q = buildOverpassQuery("node", '["man_made"="chimney"]');
-    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-
-    const geojson = osm2geojson(response);
-    chimneyLayer.addData(geojson);
-
-    return geojson;
-}
-
-
 // Define overlay layers
 var geozoneLayer = L.geoJSON([], {
     filter: filterGeozone,
@@ -502,7 +440,7 @@ var openTopoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
 
 
 // Initialize the map + set active overlays
-var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLineLayer, windTurbineLayer, chimneyLayer] }).fitWorld();
+var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLineLayer, cellTowerLayer, windTurbineLayer, chimneyLayer] }).fitWorld();
 
 // Request location of device and set view to location
 map.locate({ setView: true, maxZoom: 16 });
@@ -552,44 +490,206 @@ document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes
     }
 });
 
+
+// Functions to get datasets
+function buildOverpassQuery(nwr, filter) {
+    const q = "[maxsize:16Mi][timeout:30];"
+        + 'area["name"="België / Belgique / Belgien"]->.belgie;'
+        + `${nwr}${filter}(area.belgie);`
+        + "out geom;";
+
+    return "data=" + encodeURIComponent(q);
+}
+
+async function getNotams() {
+    const response = await (await fetch(NOTAM_URL)).json();
+
+    return response;
+}
+
+async function getGeoZones() {
+    const response = await (await fetch(GEOZONE_URL)).json();
+    geozoneLayer.addData(response);
+
+    return response;
+}
+
+async function getRailways() {
+    const response = await (await fetch(RAILWAY_URL)).json();
+    railwayLayer.addData(response);
+
+    return response;
+}
+
+async function getHighVoltageLines() {
+    // Check if it's cached in localStorage
+    var cache = localStorage.getItem(HIGH_VOLTAGE_LINE_CACHE);
+    if (cache) {
+        var cacheJson = JSON.parse(cache);
+        // Check if the cache is still valid
+        if (cacheJson && cacheJson.validUntil > Date.now()) {
+            highVoltageLineLayer.addData(cacheJson.value);
+            return cacheJson.value;
+        }
+    }
+
+    // Fetch data
+    const q = buildOverpassQuery("way", '["power"="line"]');
+    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
+    const geojson = osm2geojson(response);
+
+    // Cache fetched data in localStorage
+    if (geojson) {
+        var newCache = JSON.stringify({
+            validUntil: Date.now() + (1000 * 60 * 60 * 24 * HIGH_VOLTAGE_LINE_CACHE_TIME),
+            value: geojson
+        });
+        localStorage.setItem(HIGH_VOLTAGE_LINE_CACHE, newCache);
+    }
+    
+    highVoltageLineLayer.addData(geojson);
+    return geojson;
+}
+
+async function getCellTowers() {
+    // Check if it's cached in localStorage
+    var cache = localStorage.getItem(CELL_TOWER_CACHE);
+    if (cache) {
+        var cacheJson = JSON.parse(cache);
+        // Check if the cache is still valid
+        if (cacheJson && cacheJson.validUntil > Date.now()) {
+            cellTowerLayer.addData(cacheJson.value);
+            return cacheJson.value;
+        }
+    }
+
+    // Fetch data
+    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:30]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); ); out geom;');
+    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
+    const geojson = osm2geojson(response);
+
+    // Cache fetched data in localStorage
+    if (geojson) {
+        var newCache = JSON.stringify({
+            validUntil: Date.now() + (1000 * 60 * 60 * 24 * CELL_TOWER_CACHE_TIME),
+            value: geojson
+        });
+        localStorage.setItem(CELL_TOWER_CACHE, newCache);
+    }
+
+    cellTowerLayer.addData(geojson);
+    return geojson;
+    // // TODO
+    // var q = "action=getSites&latfrom=50.568300114956294&latto=50.73743144242077&longfrom=4.368285909920697&longto=4.929618612557416&LangSiteTable=sitesnl";
+    // var response;
+    // const res = await (await fetch(BIPT_URL, { method: "POST", body: q })).text();
+    // // response = res.body;
+    // // console.log(res);
+    // // console.log(res.blob());
+
+    // // return Promise.reject("getCellTowers() not yet implemented");
+    // return res;
+}
+
+async function getWindTurbines() {
+    // Check if it's cached in localStorage
+    var cache = localStorage.getItem(WIND_TURBINE_CACHE);
+    if (cache) {
+        var cacheJson = JSON.parse(cache);
+        // Check if the cache is still valid
+        if (cacheJson && cacheJson.validUntil > Date.now()) {
+            windTurbineLayer.addData(cacheJson.value);
+            return cacheJson.value;
+        }
+    }
+
+    // Fetch data
+    const q = buildOverpassQuery("node", '["generator:source"="wind"]');
+    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
+    const geojson = osm2geojson(response);
+    
+    // Cache fetched data in localStorage
+    if (geojson) {
+        var newCache = JSON.stringify({
+            validUntil: Date.now() + (1000 * 60 * 60 * 24 * WIND_TURBINE_CACHE_TIME),
+            value: geojson
+        });
+        localStorage.setItem(WIND_TURBINE_CACHE, newCache);
+    }
+
+    windTurbineLayer.addData(geojson);
+    return geojson;
+}
+
+async function getChimneys() {
+    // Check if it's cached in localStorage
+    var cache = localStorage.getItem(CHIMNEY_CACHE);
+    if (cache) {
+        var cacheJson = JSON.parse(cache);
+        // Check if the cache is still valid
+        if (cacheJson && cacheJson.validUntil > Date.now()) {
+            chimneyLayer.addData(cacheJson.value);
+            return cacheJson.value;
+        }
+    }
+
+    // Fetch data
+    const q = buildOverpassQuery("node", '["man_made"="chimney"]');
+    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
+    const geojson = osm2geojson(response);
+
+    // Cache fetched data in localStorage
+    if (geojson) {
+        var newCache = JSON.stringify({
+            validUntil: Date.now() + (1000 * 60 * 60 * 24 * CHIMNEY_CACHE_TIME),
+            value: geojson
+        });
+        localStorage.setItem(CHIMNEY_CACHE, newCache);
+    }
+
+    chimneyLayer.addData(geojson);
+    return geojson;
+}
+
+
 // Get NOTAM warnings and No-Fly zones
 var NOTAMS;
 getNotams().then(
-    (value) => { console.log("Successfully got NOTAMS"); console.debug(value); NOTAMS = value; },
+    (value) => { console.log("Successfully got NOTAMS"); /* console.debug(value); */ NOTAMS = value; },
     (error) => { console.log("Error getting NOTAMS:", error); }
 );
 getGeoZones().then(
-    (value) => { console.log("Successfully got no-fly zones"); console.debug(value); },
+    (value) => { console.log("Successfully got no-fly zones"); /* console.debug(value); */ },
     (error) => { console.log("Error getting no-fly zones:", error); }
 );
 
 // Create items for Railway lines
 getRailways().then(
-    (value) => { console.log("Successfully got railways"); console.debug(value); },
+    (value) => { console.log("Successfully got railways"); /* console.debug(value); */ },
     (error) => { console.log("Error getting railways:", error); }
 );
 
 // Create items for High-voltage lines
 getHighVoltageLines().then(
-    (value) => { console.log("Successfully got high-voltage lines"); console.debug(value); },
+    (value) => { console.log("Successfully got high-voltage lines"); /* console.debug(value); */ },
     (error) => { console.log("Error getting high-voltage lines:", error); }
 );
 
 // Create items for Cell towers
 getCellTowers().then(
-    (value) => { console.log("Successfully got cell towers"); console.debug(value); },
+    (value) => { console.log("Successfully got cell towers"); /* console.debug(value); */ },
     (error) => { console.log("Error getting cell towers:", error); }
 );
 
 // Create items for Wind turbines
 getWindTurbines().then(
-    (value) => { console.log("Successfully got wind turbines"); console.debug(value); },
+    (value) => { console.log("Successfully got wind turbines"); /* console.debug(value); */ },
     (error) => { console.log("Error getting wind turbines:", error); }
 );
 
 // Create items for Chimneys
 getChimneys().then(
-    (value) => { console.log("Successfully got chimneys"); console.debug(value); },
+    (value) => { console.log("Successfully got chimneys"); /* console.debug(value); */ },
     (error) => { console.log("Error getting chimneys:", error); }
 );
 
