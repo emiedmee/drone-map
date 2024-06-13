@@ -727,8 +727,6 @@ async function getTownNames() {
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
-    console.log(geojson);
-
     // Strip non-essential data
     for (let i = 0; i < geojson.features.length; i++) {
         const gfp = geojson.features[i].properties;
