@@ -343,8 +343,6 @@ function onEachGeozone(feature, layer) {
             + `<br>Lower limit: ${parseHeight(props.lowerLimit, props.lowerAltitudeUnit)} ${props.lowerAltitudeReference}`
             + `<br>Upper limit: ${parseHeight(props.upperLimit, props.upperAltitudeUnit)} ${props.upperAltitudeReference}`
         );
-        // TODO: order based on Shape__Area
-        // layer.setZIndex(props.Shape__Area);
     }
 }
 /* pointToLayerGeozone(feature, latlng) */
@@ -547,6 +545,11 @@ async function getNotams() {
 
 async function getGeoZones() {
     const response = await (await fetch(GEOZONE_URL)).json();
+
+    // Sort geozones descending by area
+    // so the biggest one gets added first and is the bottom element
+    response.features.sort((a, b) => b.properties.Shape__Area - a.properties.Shape__Area)
+
     geozoneLayer.addData(response);
 
     return response;
