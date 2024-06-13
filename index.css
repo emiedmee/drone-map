@@ -1,6 +1,10 @@
 :root {
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
   --margin: 0px;
+  --search-bar-width: 200px;
+  --search-bar-height: 31px;
+  --search-bar-padding: 5px;
+  --search-clear-icon-size: 15px;
 }
 
 * {
@@ -18,4 +22,59 @@ body,
 #map {
   height: calc(100% - 2 * var(--margin));
   width: calc(100% - 2 * var(--margin));
+}
+
+#town-search {
+  z-index: 500;
+  position: absolute;
+  width: var(--search-bar-width);
+  height: var(--search-bar-height);
+  top: 10px;
+  left: calc((100% - var(--search-bar-width)) / 2);
+}
+
+#town-search > div {
+  position: relative;
+}
+
+#town-search-bar {
+  font-size: 14px;
+  width: var(--search-bar-width);
+  height: var(--search-bar-height);
+  padding: var(--search-bar-padding);
+  border-radius: 5px;
+}
+
+#town-search-clear {
+  stroke: gray;
+  stroke-width: 1.5;
+  width: var(--search-clear-icon-size);
+  height: var(--search-clear-icon-size);
+  position: absolute;
+  top: calc((var(--search-bar-height) - var(--search-clear-icon-size)) / 2);
+  right: 8px;
+  cursor: pointer;
+}
+
+#town-search-results {
+  display: flex;
+  flex-direction: column;
+  border: 5px solid white;
+  border-radius: 5px;
+}
+
+#town-search-results > div {
+  font-size: 14px;
+  padding: 1px 0px;
+  background-color: white;
+  border-bottom: 0.5px solid lightgray;
+  cursor: default;
+}
+
+#town-search-results > div:last-child {
+  border: none;
+}
+
+.hidden {
+  display: none !important;
 }

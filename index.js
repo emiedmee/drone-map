@@ -802,3 +802,148 @@ getTownNames().then(
     (value) => { console.log("Successfully got town names"); /* console.debug(value); */ TOWN_NAMES = value; },
     (error) => { console.log("Error getting town names:", error); }
 )
+
+
+function OnTownSearchGotFocus() {
+    OnTownSearch();
+}
+
+function OnTownSearchLostFocus() {
+    // Delay the hiding of search results, because when the search results
+    //  are clicked, there is some delay as well and the click would be skipped.
+    setTimeout(() => {
+        town_search_results.classList.add("hidden");
+        town_search_results.innerHTML = "";
+    }, 150);
+}
+
+function OnTownSearchClear() {
+    town_search_bar.value = "";
+    if (town_marker) {
+        town_marker.removeFrom(map);
+        town_marker = null;
+    }
+    OnTownSearch();
+}
+
+function OnTownSearch() {
+    if (town_search_bar.value.length < 3) {
+        town_search_results.classList.add("hidden");
+        return;
+    }
+
+    // Clear left-over results and show results container
+    town_search_results.classList.add("hidden");
+    town_search_results.innerHTML = "";
+
+    // Do the actual search
+    var results = [];
+    for (var i = 0; i < TOWN_NAMES.features.length; i++) {
+        const props = TOWN_NAMES.features[i].properties;
+
+        // If searchText is included in "name" or "name:nl" or "name:fr" or "postal_code", it's a match
+        if ((props["name"] && Normalize(props["name"]).includes(Normalize(town_search_bar.value))) ||
+            (props["name:nl"] && Normalize(props["name:nl"]).includes(Normalize(town_search_bar.value))) ||
+            (props["name:fr"] && Normalize(props["name:fr"]).includes(Normalize(town_search_bar.value))) ||
+            (props["postal_code"] && Normalize(props["postal_code"]).includes(Normalize(town_search_bar.value)))
+        ) {
+            results.push(i);
+        }
+    }
+
+    // Display the results
+    results.forEach(res => {
+        if (res < 0 || res >= TOWN_NAMES.features.length) return;
+
+        const town = TOWN_NAMES.features[res];
+
+        const item = document.createElement("div");
+        item.innerText = town.properties["name"];
+        item.setAttribute("onclick", "OnClickTownSearchResult(" + res + ")");
+
+        town_search_results.appendChild(item);
+    });
+
+    town_search_results.classList.remove("hidden");
+}
+
+function OnClickTownSearchResult(index) {
+    // Clear left-over results and hide results container
+    town_search_results.classList.add("hidden");
+    town_search_results.innerHTML = "";
+
+    // Place the text of the clicked result in the search bar
+    const town = TOWN_NAMES.features[index];
+    town_search_bar.value = town.properties["name"];
+
+    // Add marker to the map
+    if (town_marker) {
+        town_marker.removeFrom(map);
+        town_marker = null;
+    }
+    if (town.geometry.type == "Point") {
+        // GeoJson coordinates are [lon, lat] and Leaflet wants [lat, lon]
+        //  and Array.reverse() will also change the data itselve
+        town_marker = L.marker([town.geometry.coordinates[1], town.geometry.coordinates[0]]).addTo(map);
+        map.flyTo([town.geometry.coordinates[1], town.geometry.coordinates[0]], 13);
+    }
+}
+
+function Normalize(text) {
+    var normalized = "";
+    text = ("" + text).trim().toLowerCase();
+
+    for (var i = 0; i < text.length; i++) {
+        switch (text[i]) {
+            case "á":
+            case "à":
+            case "â":
+            case "ä":
+            case "ã":
+                normalized += "a";
+                break;
+            case "é":
+            case "è":
+            case "ê":
+            case "ë":
+                normalized += "e";
+                break;
+            case "í":
+            case "ì":
+            case "î":
+            case "ï":
+                normalized += "i";
+                break;
+            case "ó":
+            case "ò":
+            case "ô":
+            case "ö":
+            case "õ":
+                normalized += "o";
+                break;
+            case "ú":
+            case "ù":
+            case "û":
+            case "ü":
+                normalized += "u";
+                break;
+            default:
+                normalized += text[i];
+                break;
+        }
+    }
+
+    return normalized;
+}
+
+
+var town_marker; // Marker for the town search result
+var town_search = document.getElementById("town-search");
+var town_search_bar = document.getElementById("town-search-bar");
+var town_search_clear = document.getElementById("town-search-clear");
+var town_search_results = document.getElementById("town-search-results");
+
+town_search_bar.addEventListener("input", OnTownSearch);
+town_search_bar.addEventListener("focus", OnTownSearchGotFocus);
+town_search_bar.addEventListener("blur", OnTownSearchLostFocus);
+town_search_clear.addEventListener("click", OnTownSearchClear);
