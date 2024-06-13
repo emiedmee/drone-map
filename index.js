@@ -14,15 +14,15 @@ const NOTAM_CACHE_TIME = 1; // 1D
 const GEOZONE_CACHE = "geozone-cache";
 const GEOZONE_CACHE_TIME = 1; // 1D
 const RAILWAY_CACHE = "railway-cache";
-const RAILWAY_CACHE_TIME = 56; // 2M
+const RAILWAY_CACHE_TIME = 60; // 2M
 const HIGH_VOLTAGE_LINE_CACHE = "high-voltage-line-cache";
-const HIGH_VOLTAGE_LINE_CACHE_TIME = 56; // 2M
+const HIGH_VOLTAGE_LINE_CACHE_TIME = 60; // 2M
 const CELL_TOWER_CACHE = "cell-tower-cache";
-const CELL_TOWER_CACHE_TIME = 28; // 1M
+const CELL_TOWER_CACHE_TIME = 30; // 1M
 const WIND_TURBINE_CACHE = "wind-turbine-cache";
-const WIND_TURBINE_CACHE_TIME = 84; // 3M
+const WIND_TURBINE_CACHE_TIME = 90; // 3M
 const CHIMNEY_CACHE = "chimney-cache";
-const CHIMNEY_CACHE_TIME = 84; // 3M
+const CHIMNEY_CACHE_TIME = 90; // 3M
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
@@ -576,6 +576,11 @@ async function getHighVoltageLines() {
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
+    // Strip non-essential data
+    for (let i = 0; i < geojson.features.length; i++) {
+        geojson.features[i].properties = {};
+    }
+
     // Cache fetched data in localStorage
     if (geojson) {
         var newCache = JSON.stringify({
@@ -606,6 +611,18 @@ async function getCellTowers() {
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
+    // Strip non-essential data
+    for (let i = 0; i < geojson.features.length; i++) {
+        var new_properties = {};
+        for (var key in geojson.features[i].properties) {
+            if (key.startsWith("ref:BE:")) {
+                new_properties[key] = "";
+            }
+        }
+
+        geojson.features[i].properties = new_properties;
+    }
+
     // Cache fetched data in localStorage
     if (geojson) {
         var newCache = JSON.stringify({
@@ -635,7 +652,12 @@ async function getWindTurbines() {
     const q = buildOverpassQuery("node", '["generator:source"="wind"]');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
-    
+
+    // Strip non-essential data
+    for (let i = 0; i < geojson.features.length; i++) {
+        geojson.features[i].properties = {};
+    }
+
     // Cache fetched data in localStorage
     if (geojson) {
         var newCache = JSON.stringify({
@@ -665,6 +687,11 @@ async function getChimneys() {
     const q = buildOverpassQuery("node", '["man_made"="chimney"]');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
+
+    // Strip non-essential data
+    for (let i = 0; i < geojson.features.length; i++) {
+        geojson.features[i].properties = {};
+    }
 
     // Cache fetched data in localStorage
     if (geojson) {
