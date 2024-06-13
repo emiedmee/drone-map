@@ -7,7 +7,6 @@ const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/ser
 const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datasets/lijnsecties/exports/geojson";
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
-const BIPT_URL = "https://www.sites.bipt.be/ajaxinterface.php"; // method: POST; body: action=getSites&latfrom=51.02670680117774&latto=51.06863331870643&longfrom=3.6838944547166808&longto=3.8242276303758604&LangSiteTable=sitesnl
 
 
 const NOTAM_CACHE = "notam-cache";
@@ -24,6 +23,8 @@ const WIND_TURBINE_CACHE = "wind-turbine-cache";
 const WIND_TURBINE_CACHE_TIME = 84; // 3M
 const CHIMNEY_CACHE = "chimney-cache";
 const CHIMNEY_CACHE_TIME = 84; // 3M
+
+const PREFERRED_UNIT = "m"; // Options: ft, m
 
 
 // Create custom icons
@@ -108,6 +109,31 @@ const markerOptionsChimney = {
 };
 
 
+// 1 foot = 0.3048 metres
+function ft2m(ft) {
+    return ft * 0.3048;
+}
+function m2ft(m) {
+    return m / 0.3048;
+}
+
+// 1 nautical mile = 1.852 kilometres
+function nm2km(nm) {
+    return nm * 1.852;
+}
+function km2nm(km) {
+    return km / 1.852;
+}
+
+// flight levels = hectofeet
+function fl2ft(fl) {
+    return fl * 100;
+}
+function ft2fl(ft) {
+    return ft / 100;
+}
+
+
 // var someLayer = L.GeoJSON(geoJsonFeatureData, {
 //     filter: whether to show a feature or not
 //     style: for general styling of the features
@@ -123,7 +149,7 @@ function filterGeozone(feature, layer) {
     if (feature.properties) {
         const props = feature.properties;
 
-        // Filter out geozones with lower limit above 1200 ft / 400 m OR 410 ft / 125 m
+        // Filter out geozones with lower limit above 410 ft / 125 m
         if (props.lowerAltitudeUnit) {
             if (props.lowerAltitudeUnit == "ft") {
                 if (props.lowerLimit <= 410) // ft
@@ -184,7 +210,6 @@ function renderGeoZone(geozone) {
 
     // get the 'now' time (utc) in all its necessary form
     var now = new Date();
-    //var now = Date(2022, 04, 05, 00, 00, 00);
     var minute = now.getUTCMinutes();
     if (minute < 10)
         minute = 0 + '' + minute;
@@ -300,11 +325,24 @@ function styleGeozone(feature) {
     }
 }
 /* onEachGeozone(feature, layer) */
+function parseHeight(height, unit) {
+    if (PREFERRED_UNIT == unit) {
+        return parseInt(height).toFixed(0) + " " + unit;
+    } else {
+        if (unit == "ft" && PREFERRED_UNIT == "m") {
+            return parseInt(ft2m(height)).toFixed(0) + " m";
+        } else { // unit == "m" && PREFERRED_UNIT == "ft"
+            return parseInt(m2ft(height)).toFixed(0) + " ft";
+        }
+    }
+}
 function onEachGeozone(feature, layer) {
     if (feature.properties) {
         const props = feature.properties;
-        layer.bindPopup(`${props.name}<br>Lower limit: ${parseInt(props.lowerLimit).toFixed(0)} ${props.lowerAltitudeUnit}<br>`
-            + `Upper limit: ${parseInt(props.upperLimit).toFixed(0)} ${props.upperAltitudeUnit}`);
+        layer.bindPopup(`${props.name}`
+            + `<br>Lower limit: ${parseHeight(props.lowerLimit, props.lowerAltitudeUnit)} ${props.lowerAltitudeReference}`
+            + `<br>Upper limit: ${parseHeight(props.upperLimit, props.upperAltitudeUnit)} ${props.upperAltitudeReference}`
+        );
         // TODO: order based on Shape__Area
         // layer.setZIndex(props.Shape__Area);
     }
@@ -546,7 +584,7 @@ async function getHighVoltageLines() {
         });
         localStorage.setItem(HIGH_VOLTAGE_LINE_CACHE, newCache);
     }
-    
+
     highVoltageLineLayer.addData(geojson);
     return geojson;
 }
@@ -579,16 +617,6 @@ async function getCellTowers() {
 
     cellTowerLayer.addData(geojson);
     return geojson;
-    // // TODO
-    // var q = "action=getSites&latfrom=50.568300114956294&latto=50.73743144242077&longfrom=4.368285909920697&longto=4.929618612557416&LangSiteTable=sitesnl";
-    // var response;
-    // const res = await (await fetch(BIPT_URL, { method: "POST", body: q })).text();
-    // // response = res.body;
-    // // console.log(res);
-    // // console.log(res.blob());
-
-    // // return Promise.reject("getCellTowers() not yet implemented");
-    // return res;
 }
 
 async function getWindTurbines() {
