@@ -75,7 +75,7 @@ const styleRailway = {
     "fill": false,
 
     "color": "#ff0000",
-    "weight": "2"
+    "weight": "3"
 };
 const styleHighVoltageLine = {
     "fill": false,
@@ -750,13 +750,3 @@ getChimneys().then(
     (value) => { console.log("Successfully got chimneys"); /* console.debug(value); */ },
     (error) => { console.log("Error getting chimneys:", error); }
 );
-
-
-// //////////
-// var info = document.getElementById("info");
-// info.textContent = "info text";
-// map.on('move', function (e) {
-//     info.textContent = e.target.getCenter() + " " + e.target.getZoom();
-//     // console.log(e);
-// });
-// //////////

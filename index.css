@@ -1,20 +1,21 @@
 :root {
+  font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
   --margin: 0px;
 }
 
-body {
+* {
+  box-sizing: border-box;
   padding: 0px;
+  margin: 0px;
+}
+
+body {
   margin: var(--margin);
 }
 
 html,
 body,
 #map {
-  height: calc(100vh - 2 * var(--margin));
-  width: calc(100vw - 2 * var(--margin));
-}
-
-#info {
-  height: 1em;
-  margin-top: calc(-1 * var(--margin));
+  height: calc(100% - 2 * var(--margin));
+  width: calc(100% - 2 * var(--margin));
 }
