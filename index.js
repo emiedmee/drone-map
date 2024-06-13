@@ -23,6 +23,8 @@ const WIND_TURBINE_CACHE = "wind-turbine-cache";
 const WIND_TURBINE_CACHE_TIME = 90; // 3M
 const CHIMNEY_CACHE = "chimney-cache";
 const CHIMNEY_CACHE_TIME = 90; // 3M
+const TOWN_NAMES_CACHE = "town-names-cache";
+const TOWN_NAMES_CACHE_TIME = 180; // 6M
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
@@ -709,6 +711,50 @@ async function getChimneys() {
     return geojson;
 }
 
+async function getTownNames() {
+    // Check if it's cached in localStorage
+    var cache = localStorage.getItem(TOWN_NAMES_CACHE);
+    if (cache) {
+        var cacheJson = JSON.parse(cache);
+        // Check if the cache is still valid
+        if (cacheJson && cacheJson.validUntil > Date.now()) {
+            return cacheJson.value;
+        }
+    }
+
+    // Fetch data
+    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:45]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["place"="city"](area.belgie); node["place"="borough"](area.belgie); node["place"="suburb"](area.belgie); node["place"="town"](area.belgie); node["place"="village"](area.belgie); ); out geom;');
+    const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
+    const geojson = osm2geojson(response);
+
+    console.log(geojson);
+
+    // Strip non-essential data
+    for (let i = 0; i < geojson.features.length; i++) {
+        const gfp = geojson.features[i].properties;
+        if (!gfp["name"]) continue;
+
+        var new_properties = {};
+        if (gfp["name"]) new_properties["name"] = gfp["name"];
+        if (gfp["name:nl"]) new_properties["name:nl"] = gfp["name:nl"];
+        if (gfp["name:fr"]) new_properties["name:fr"] = gfp["name:fr"];
+        if (gfp["name:en"]) new_properties["name:en"] = gfp["name:en"];
+        if (gfp["postal_code"]) new_properties["postal_code"] = gfp["postal_code"];
+
+        geojson.features[i].properties = new_properties;
+    }
+
+    // Cache fetched data in localStorage
+    if (geojson) {
+        var newCache = JSON.stringify({
+            validUntil: Date.now() + (1000 * 60 * 60 * 24 * TOWN_NAMES_CACHE_TIME),
+            value: geojson
+        });
+        localStorage.setItem(TOWN_NAMES_CACHE, newCache);
+    }
+
+    return geojson;
+}
 
 // Get NOTAM warnings and No-Fly zones
 var NOTAMS;
@@ -750,3 +796,9 @@ getChimneys().then(
     (value) => { console.log("Successfully got chimneys"); /* console.debug(value); */ },
     (error) => { console.log("Error getting chimneys:", error); }
 );
+
+var TOWN_NAMES;
+getTownNames().then(
+    (value) => { console.log("Successfully got town names"); /* console.debug(value); */ TOWN_NAMES = value; },
+    (error) => { console.log("Error getting town names:", error); }
+)
