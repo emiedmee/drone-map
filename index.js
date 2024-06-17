@@ -338,12 +338,33 @@ function parseHeight(height, unit) {
         }
     }
 }
+function parseTimeField(d) {
+    var s = null;
+    if (d)
+        s = d.split(';');
+
+    if (d == null || d.length == 0 || d == "Non Active")
+        return "Non Active";
+
+    if (d && d == "permanent")
+        return "Permanent";
+
+    var out = "";
+    for (var k in s) {
+        var st = s[k];
+        var begin = st.split('-')[0] + "";
+        var end = st.split('-')[1] + "";
+        out += `; ${begin.substring(0, 2)}:${begin.substring(2, 4)}-${end.substring(0, 2)}:${end.substring(2, 4)}`;
+    }
+    return out.substring(2);
+}
 function onEachGeozone(feature, layer) {
     if (feature.properties) {
         const props = feature.properties;
         layer.bindPopup(`${props.name}`
             + `<br>Lower limit: ${parseHeight(props.lowerLimit, props.lowerAltitudeUnit)} ${props.lowerAltitudeReference}`
             + `<br>Upper limit: ${parseHeight(props.upperLimit, props.upperAltitudeUnit)} ${props.upperAltitudeReference}`
+            + `<br>Schedule: ${parseTimeField(props.TimeField)}`
         );
     }
 }
@@ -801,6 +822,7 @@ getChimneys().then(
     (error) => { console.log("Error getting chimneys:", error); }
 );
 
+// Get towns/locations
 var TOWN_NAMES;
 getTownNames().then(
     (value) => { console.log("Successfully got town names"); /* console.debug(value); */ TOWN_NAMES = value; },
