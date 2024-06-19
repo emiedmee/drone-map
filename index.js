@@ -212,13 +212,14 @@ function renderGeoZone(geozone) {
 
     // get the 'now' time (utc) in all its necessary form
     var now = new Date();
-    var minute = now.getUTCMinutes();
-    if (minute < 10)
-        minute = 0 + '' + minute;
 
     var hour = now.getUTCHours();
     if (hour < 10)
         hour = 0 + '' + hour;
+    
+    var minute = now.getUTCMinutes();
+    if (minute < 10)
+        minute = 0 + '' + minute;
 
     var second = now.getUTCSeconds();
     if (second < 10)
@@ -238,7 +239,6 @@ function renderGeoZone(geozone) {
     var nowNumberWithDays = parseInt(year + '' + month + '' + day + '' + hour + '' + minute); // year + '' + month + '' + day + '/' + hour + '' + minute;
 
     // Param
-    var onlyAfterEndTime = false;
     var countingInterval = 0;
     var intervalInWindow = false;
 
@@ -253,7 +253,6 @@ function renderGeoZone(geozone) {
     // If geozone permanent: 
     // either in 'large window' (Active)
     // Will get to it later in the day (Become Active)
-
     if (d && d == "permanent") {
         // check if nowTime is in one of the interval
         for (var sp in sP_split) {
@@ -338,6 +337,18 @@ function parseHeight(height, unit) {
     }
 }
 function parseTimeField(d) {
+    function sub(str, start, end, offset) {
+        str = str.substring(start, end);
+        str = (str - offset) % 24;
+        if (str < 10)
+            str = '0' + str;
+        return str;
+    }
+
+    var now = new Date();
+    var offset = now.getTimezoneOffset() / 60; // hour offset to substract from UTC hours
+                                               // UTC+2 => getTimezoneOffset() = -120
+
     var s = null;
     if (d)
         s = d.split(';');
@@ -348,14 +359,18 @@ function parseTimeField(d) {
     if (d && d == "permanent")
         return "Permanent";
 
-    var out = "";
+    var utc = "";
+    var local = "";
     for (var k in s) {
         var st = s[k];
-        var begin = st.split('-')[0] + "";
-        var end = st.split('-')[1] + "";
-        out += `; ${begin.substring(0, 2)}:${begin.substring(2, 4)}-${end.substring(0, 2)}:${end.substring(2, 4)}`;
+        var begin = st.split('-')[0];
+        var end = st.split('-')[1];
+        utc += `; ${sub(begin, 0, 2, 0)}:${begin.substring(2, 4)}-${sub(end, 0, 2, 0)}:${end.substring(2, 4)}`;
+        local += `; ${sub(begin, 0, 2, offset)}:${begin.substring(2, 4)}-${sub(end, 0, 2, offset)}:${end.substring(2, 4)}`;
     }
-    return out.substring(2);
+    utc = "<br>&nbsp;\u2022 UTC: " + utc.substring(2);
+    local = "<br>&nbsp;\u2022 Local: " + local.substring(2);
+    return utc + local;
 }
 function onEachGeozone(feature, layer) {
     if (feature.properties) {
@@ -456,26 +471,26 @@ function pointToLayerChimney(feature, latlng) {
 var geozoneLayer = L.geoJSON([], {
     filter: filterGeozone,
     style: styleGeozone,
-    onEachFeature: onEachGeozone
+    onEachFeature: onEachGeozone,
 });
 var railwayLayer = L.geoJSON([], {
     style: styleRailway,
-    onEachFeature: onEachRailway
+    onEachFeature: onEachRailway,
 });
 var highVoltageLineLayer = L.geoJSON([], {
-    style: styleHighVoltageLine
+    style: styleHighVoltageLine,
 });
 var cellTowerLayer = L.geoJSON([], {
     onEachFeature: onEachCellTower,
-    pointToLayer: pointToLayerCellTower
+    pointToLayer: pointToLayerCellTower,
 });
 var windTurbineLayer = L.geoJSON([], {
     onEachFeature: onEachWindTurbine,
-    pointToLayer: pointToLayerWindTurbine
+    pointToLayer: pointToLayerWindTurbine,
 });
 var chimneyLayer = L.geoJSON([], {
     onEachFeature: onEachChimney,
-    pointToLayer: pointToLayerChimney
+    pointToLayer: pointToLayerChimney,
 });
 
 
