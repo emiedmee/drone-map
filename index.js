@@ -234,9 +234,8 @@ function renderGeoZone(geozone) {
     if (day < 10)
         day = 0 + '' + day;
 
-    var nowNumber = hour + '' + minute;
-    var nowNumberWithDays = year + '' + month + '' + day + '/' + hour + '' + minute;
-    var nowNumberFull = nowNumber + '' + second;
+    var nowNumberFull = parseInt(hour + '' + minute + '' + second);
+    var nowNumberWithDays = parseInt(year + '' + month + '' + day + '' + hour + '' + minute); // year + '' + month + '' + day + '/' + hour + '' + minute;
 
     // Param
     var onlyAfterEndTime = false;
@@ -248,7 +247,7 @@ function renderGeoZone(geozone) {
     if (d == null || d.length == 0 || d == "Non Active")
         return "Non Active";
     // check if nowTime is over the last end time
-    if (nowNumberFull > eP_split)//[eP_split.length - 1])
+    if (nowNumberFull > parseInt(eP_split[eP_split.length - 1]))
         return "Non Active";
 
     // If geozone permanent: 
@@ -258,8 +257,8 @@ function renderGeoZone(geozone) {
     if (d && d == "permanent") {
         // check if nowTime is in one of the interval
         for (var sp in sP_split) {
-            var sp_temp = sP_split[sp];
-            var ep_temp = eP_split[sp];
+            var sp_temp = parseInt(sP_split[sp]);
+            var ep_temp = parseInt(eP_split[sp]);
 
             if ((sp_temp <= nowNumberFull) && (nowNumberFull <= ep_temp))
                 return "Active";
@@ -282,22 +281,22 @@ function renderGeoZone(geozone) {
     for (var k in s) {
         // get the variables
         var st = s[k];
-        var begin = st.split('-')[0];
-        var end = st.split('-')[1];
+        var begin = parseInt(st.split('-')[0]);
+        var end = parseInt(st.split('-')[1]);
 
-        var NowNumberToUseStart = nowNumber;
-        if (begin.length == 11) {
+        var NowNumberToUseStart = nowNumberFull; // nowNumber
+        if (begin > 999999) { // begin.length == 11
             NowNumberToUseStart = nowNumberWithDays;
         }
-        var NowNumberToUseEnd = nowNumber;
-        if (end.length == 11) {
+        var NowNumberToUseEnd = nowNumberFull; // nowNumber
+        if (end > 999999) { // end.length == 11
             NowNumberToUseEnd = nowNumberWithDays;
         }
 
         // check if interval is in a window
         for (var sp in sP_split) {
-            var sp_temp = sP_split[sp];
-            var ep_temp = eP_split[sp];
+            var sp_temp = parseInt(sP_split[sp]);
+            var ep_temp = parseInt(eP_split[sp]);
 
             // the interval stops after the window starts
             // and start before the window ends
