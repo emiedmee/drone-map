@@ -152,15 +152,23 @@ function filterGeozone(feature, layer) {
         const props = feature.properties;
 
         // Filter out geozones with lower limit above 410 ft / 125 m
-        if (props.lowerAltitudeUnit) {
-            if (props.lowerAltitudeUnit == "ft") {
-                if (props.lowerLimit <= 410) // ft
-                    show = true;
-            } else {
-                if (props.lowerLimit <= 125) // m
-                    show = true;
-            }
-        }
+        /**
+         * The attributes "lowerLimit" and "upperLimit" seem to always be in "meter",
+         *  despite the "lowerAltitudeUnit" and "upperAltitudeUnit" being "ft" most of the times.
+         * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
+         *  they do a hard-coded conversion from meter to feet, regardless of the unit.
+         */
+        if (props.lowerLimit <= 125) // m
+            show = true;
+        // if (props.lowerAltitudeUnit) {
+        //     if (props.lowerAltitudeUnit == "ft") {
+        //         if (props.lowerLimit <= 410) // ft
+        //             show = true;
+        //     } else if (props.lowerAltitudeUnit == "m") {
+        //         if (props.lowerLimit <= 125) // m
+        //             show = true;
+        //     }
+        // }
 
         // /**
         //  * For NOTAM:
@@ -326,15 +334,44 @@ function styleGeozone(feature) {
 }
 /* onEachGeozone(feature, layer) */
 function parseHeight(height, unit) {
-    if (PREFERRED_UNIT == unit) {
-        return parseInt(height).toFixed(0) + " " + unit;
-    } else {
-        if (unit == "ft" && PREFERRED_UNIT == "m") {
-            return parseInt(ft2m(height)).toFixed(0) + " m";
-        } else { // unit == "m" && PREFERRED_UNIT == "ft"
-            return parseInt(m2ft(height)).toFixed(0) + " ft";
-        }
+    /**
+     * The attributes "lowerLimit" and "upperLimit" seem to always be in "meter",
+     *  despite the "lowerAltitudeUnit" and "upperAltitudeUnit" being "ft" most of the times.
+     * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
+     *  they do a hard-coded conversion from meter to feet, regardless of the unit.
+     *      return strings.upperLimit
+     *           + ': ' + Math.round($q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperLimit] / 0.3048)
+     *           + ' ' + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperUnit]
+     *           + ' (' + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperAltitudeReference] + ')';
+     */
+    // height unit is always "m"
+    if (PREFERRED_UNIT == "ft") {
+        return `${parseInt(m2ft(height)).toFixed(0)} ${PREFERRED_UNIT}`;
+    } else if (PREFERRED_UNIT == "m") {
+        return `${parseInt(height).toFixed(0)} ${PREFERRED_UNIT}`;
     }
+
+    // if (PREFERRED_UNIT == unit) {
+    //     return parseInt(height).toFixed(0) + " " + unit;
+    // } else {
+    //     if (PREFERRED_UNIT == "ft") {
+    //         if (unit == "FL") {
+    //             return `${parseInt(fl2ft(height)).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+    //         } else if (unit == "ft") {
+    //             return `${parseInt(height).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+    //         } else if (unit == "m") {
+    //             return `${parseInt(m2ft(height)).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+    //         }
+    //     } else if (PREFERRED_UNIT == "m") {
+    //         if (unit == "FL") {
+    //             return `${parseInt(ft2m(fl2ft(height))).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+    //         } else if (unit == "ft") {
+    //             return `${parseInt(ft2m(height)).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+    //         } else if (unit == "m") {
+    //             return `${parseInt(height).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+    //         }
+    //     }
+    // }
 }
 function parseTimeField(d) {
     function sub(str, start, end, offset) {
