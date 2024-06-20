@@ -1,8 +1,8 @@
 const ARCGIS_LIMIT = "" // empty: no limit
 const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=geojson&outFields=*&returnGeometry=true&spatialRel=esriSpatialRelIntersects&where=status%3D%27validated%27&orderByFields=Shape__Area";
-// notamId%2Ccode%2Cname%2ClowerLimit%2CupperLimit%2ClowerAltitudeUnit%2CupperAltitudeUnit%2Creason%2Crestriction%2COtherReasonInfo%2CShape__Area
-const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=json&outFields=*&returnGeometry=false&spatialRel=esriSpatialRelIntersects&where=status%20%3D%20%27validated%27%20AND%20last_version%20%3D%20%27yes%27";
-// notamId%2Cfir%2Clocation%2CactivityStart%2CvalidityEnd%2Cschedule%2CnotamText%2ClowerLimit%2CupperLimit%2ClowerLimitUnit%2CupperLimitUnit
+// Shape__Area%2Cname%2Ccode%2ClowerAltitudeUnit%2CupperAltitudeUnit%2ClowerAltitudeReference%2CupperAltitudeReference%2CTimeField%2ClowerLimit%2CupperLimit%2Ccategories%2CwrittenStartTimeGeneral%2CwrittenEndTimeGeneral
+const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=json&outFields=*&returnGeometry=false&spatialRel=esriSpatialRelIntersects&where=status%3D%27validated%27%20AND%20last_version%3D%27yes%27";
+// notamId%2Cfir%2Clocation%2CactivityStart%2CvalidityEnd%2Cschedule%2ClowerLimit%2ClowerLimitUnit%2CupperLimit%2CupperLimitUnit%2ClowerLimitRef%2CupperLimitRef%2CnotamText
 
 const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datasets/lijnsecties/exports/geojson";
 
