@@ -28,6 +28,191 @@ const TOWN_NAMES_CACHE_TIME = 180; // 6M
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
+const railway_fix = {
+    // Gent - Brugge
+    "1953": "50D",
+    "1969": "50A",
+    "2045": "50A",
+    "2047": "50D OR 350A", // 50D OR 350A ?
+    "2044": "50A",
+    "2046": "50A",
+    "2020": "50D", // 50D OR 350A ?
+    "2037": "50A",
+    "2021": "50D",
+
+    // Zedelgem - Lichtervelde
+    "893": "66",
+
+    // Lessines - Ollignies
+    "1956": "87",
+    "1957": "87",
+
+    // Saint-Ghislain - Villerot
+    "1977": "100",
+    "1978": "100",
+    "1979": "100",
+
+    // Mont-sur-Marchienne - Hourpes
+    "2032": "130A",
+
+    // Athus
+    "2009": "165/1",
+    "2010": "165/1",
+    "2013": "165/3",
+    "2014": "165/3",
+    "2015": "165/3",
+    "2011": "167",
+    "2012": "167",
+
+    // Hasselt
+    "1936": "21A",
+    "1937": "21A",
+    "2041": "35",
+    "2042": "35",
+
+    // Tessenderlo
+    "1961": "218",
+
+    // Vertrijk - Ezemaal
+    "1970": "36",
+
+    // Ottignies - La Hulpe
+    "2031": "161D",
+    "2003": "161",
+    "2058": "161A",
+
+    // Nivelles - Linkebeek
+    "2026": "124",
+    "2025": "124",
+    "2027": "124D",
+    "2024": "124",
+    "2023": "124",
+
+    // Halle - Linkebeek
+    "1966": "26",
+
+    // Denderleeuw - Brussel-Zuid
+    "1945": "50A",
+    "1942": "50C",
+    "1944": "50A",
+    "1941": "50C",
+    "1946": "50A",
+    "2043": "50C",
+
+    // Vorst-Rijtuigen
+    "1955": "96B",
+    "1959": "96B",
+
+    // Schaarbeek
+    "1214": "36",
+    "1986": "26",
+    "1987": "26",
+    "1988": "26B",
+    "1989": "26B",
+
+    // Mechelen
+    "909": "25",
+    "1990": "25N",
+    "1991": "25N",
+    "1992": "25N",
+
+    // Antwerpen-Berchem
+    "1964": "27A",
+    "1965": "27A",
+
+    // Antwerpen-Haven
+    "1998": "27M/2",
+    "1999": "27M/2",
+    "1993": "27M/",
+    "1943": "10",
+    "1974": "211",
+    "1972": "211C",
+    "1975": "211",
+    "1976": "211C",
+    "1983": "211",
+    "1981": "211C",
+    "1982": "211C",
+    "1980": "211",
+    "2016": "11",
+    "2017": "11",
+    "748": "11A",
+};
+const railway_delete = {
+    // Y.Oost Driehoek Ledeberg - TW Melle
+    "192": "192",
+    "1958": "1958",
+
+    // Zeebrugge-Dorp
+    "1997": "1997",
+    "1994": "1994",
+    "1996": "1996",
+
+    // Bundel Pelikaan
+    "2053": "2053",
+    "2054": "2054",
+    "2055": "2055",
+    "2056": "2056",
+    "2057": "2057",
+
+    // Bundel Ramskapelle
+    "2050": "2050",
+    "2049": "2049",
+    "2048": "2048",
+    "2051": "2051",
+    "2052": "2052",
+
+    // Monceau
+    "175": "175",
+    "2006": "2006",
+    "294": "294",
+
+    // Châtelet
+    "1984": "1984",
+
+    // Jemeppe-Sur-Sambre
+    "2007": "2007",
+
+    // Liège
+    "2002": "2002",
+
+    // Angleur
+    "2029": "2029",
+
+    // Kinkempois
+    "1875": "1875",
+
+    // Lanaken
+    "1165": "1165",
+
+    // Hasselt
+    "1967": "1967",
+    "1968": "1968",
+    "2022": "2022",
+    "2030": "2030",
+
+    // Leuven
+    "2001": "2001",
+    "2038": "2038",
+    "2039": "2039",
+    "2040": "2040",
+
+    // Nivelles - Linkebeek
+    "56": "56",
+    "2028": "2028",
+
+    // Schaarbeek
+    "1985": "1985",
+    "1973": "1973",
+    "1962": "1962",
+    "1963": "1963",
+
+    // Antwerpen-Haven
+    "2004": "2004",
+    "2005": "2005",
+    "1995": "1995",
+    "2000": "2000",
+    "2008": "2008",
+};
 
 // Create custom icons
 const iconCellTower = L.divIcon({
@@ -642,9 +827,28 @@ async function getGeoZones() {
 
 async function getRailways() {
     const response = await (await fetch(RAILWAY_URL)).json();
-    railwayLayer.addData(response);
 
-    return response;
+    // New object that will contain all the railway sections that are not deleted
+    var new_response = { "type": "FeatureCollection", "features": [] };
+
+    // Fix missing labels for railway sections
+    for (let i = 0; i < response.features.length; i++) {
+        if (railway_delete[response.features[i].properties["ls_id"]]) {
+            // Check first if this section should be deleted
+            continue;
+        } else if (/\d+.*?L\/\d+/.test(response.features[i].properties["label"])) {
+            // Filter out all non-mainline railway sections
+            continue;
+        } else if (railway_fix[response.features[i].properties["ls_id"]]) {
+            // Apply fix for missing label
+            response.features[i].properties["label"] = railway_fix[response.features[i].properties["ls_id"]]
+        }
+        // Include section in new object if it's not deleted
+        new_response.features.push(response.features[i]);
+    }
+
+    railwayLayer.addData(new_response);
+    return new_response;
 }
 
 async function getHighVoltageLines() {
