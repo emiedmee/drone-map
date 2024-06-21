@@ -14,7 +14,7 @@ const NOTAM_CACHE_TIME = 1; // 1D
 const GEOZONE_CACHE = "geozone-cache";
 const GEOZONE_CACHE_TIME = 1; // 1D
 const RAILWAY_CACHE = "railway-cache";
-const RAILWAY_CACHE_TIME = 60; // 2M
+const RAILWAY_CACHE_TIME = 90; // 3M
 const HIGH_VOLTAGE_LINE_CACHE = "high-voltage-line-cache";
 const HIGH_VOLTAGE_LINE_CACHE_TIME = 60; // 2M
 const CELL_TOWER_CACHE = "cell-tower-cache";
@@ -637,13 +637,13 @@ function onEachCellTower(feature, layer) {
     if (feature.properties) {
         const props = feature.properties;
 
-        text += "<br/>Operators:";
+        text += "<br>Operators:";
         if (props["communication:gsm-r"] && props["operator"]) {
-            text += `<br>- ${props.operator}`;
+            text += `<br>&nbsp;\u2022 ${props.operator}`;
         }
         for (var key in props) {
             if (key.startsWith("ref:BE:") && key != "ref:BE:BIPT") {
-                text += `<br>- ${key.slice(7)}`
+                text += `<br>&nbsp;\u2022 ${key.slice(7)}`
             }
         }
     }
@@ -899,14 +899,18 @@ async function getCellTowers() {
     }
 
     // Fetch data
-    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:30]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); ); out geom;');
+    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:30]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); ); out geom;');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
     // Strip non-essential data
     for (let i = 0; i < geojson.features.length; i++) {
+        const gfp = geojson.features[i].properties;
+
         var new_properties = {};
-        for (var key in geojson.features[i].properties) {
+        if (gfp["operator"]) new_properties["operator"] = gfp["operator"];
+        if (gfp["communication:gsm-r"]) new_properties["communication:gsm-r"] = gfp["communication:gsm-r"];
+        for (var key in gfp) {
             if (key.startsWith("ref:BE:")) {
                 new_properties[key] = "";
             }
