@@ -8,6 +8,8 @@
   --search-bar-padding: 5px;
   --search-results-border: 5px;
   --search-clear-icon-size: 15px;
+  --icon-nmbs-width: calc(var(--font-size) + (2 * 1px) + 1px); /* font-size + 2 * padding + border-bottom */
+  --icon-nmbs-margin: 5px;
 }
 
 * {
@@ -69,6 +71,7 @@ body,
 }
 
 #location-search-results > div {
+  display: flex;
   font-size: var(--font-size);
   padding: 1px 0px;
   background-color: white;
@@ -78,6 +81,15 @@ body,
 
 #location-search-results > div:last-child {
   border: none;
+}
+
+.station {
+  max-width: calc(var(--search-bar-width) - (2 * var(--search-results-border)) - var(--icon-nmbs-width) - var(--icon-nmbs-margin));
+}
+
+.icon-nmbs {
+  width: var(--icon-nmbs-width);
+  margin-right: var(--icon-nmbs-margin);
 }
 
 .hidden {
