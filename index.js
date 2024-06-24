@@ -23,8 +23,8 @@ const WIND_TURBINE_CACHE = "wind-turbine-cache";
 const WIND_TURBINE_CACHE_TIME = 90; // 3M
 const CHIMNEY_CACHE = "chimney-cache";
 const CHIMNEY_CACHE_TIME = 90; // 3M
-const TOWN_NAMES_CACHE = "town-names-cache";
-const TOWN_NAMES_CACHE_TIME = 180; // 6M
+const LOCATION_NAMES_CACHE = "location-names-cache";
+const LOCATION_NAMES_CACHE_TIME = 180; // 6M
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
@@ -1002,9 +1002,9 @@ async function getChimneys() {
     return geojson;
 }
 
-async function getTownNames() {
+async function getLocationNames() {
     // Check if it's cached in localStorage
-    var cache = localStorage.getItem(TOWN_NAMES_CACHE);
+    var cache = localStorage.getItem(LOCATION_NAMES_CACHE);
     if (cache) {
         var cacheJson = JSON.parse(cache);
         // Check if the cache is still valid
@@ -1013,6 +1013,9 @@ async function getTownNames() {
         }
     }
 
+    /**
+     * Town names
+     */
     // Fetch data
     const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:45]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["place"="city"](area.belgie); node["place"="borough"](area.belgie); node["place"="suburb"](area.belgie); node["place"="town"](area.belgie); node["place"="village"](area.belgie); ); out geom;');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
@@ -1027,19 +1030,43 @@ async function getTownNames() {
         if (gfp["name"]) new_properties["name"] = gfp["name"];
         if (gfp["name:nl"]) new_properties["name:nl"] = gfp["name:nl"];
         if (gfp["name:fr"]) new_properties["name:fr"] = gfp["name:fr"];
-        if (gfp["name:en"]) new_properties["name:en"] = gfp["name:en"];
         if (gfp["postal_code"]) new_properties["postal_code"] = gfp["postal_code"];
 
         geojson.features[i].properties = new_properties;
     }
 
+    /**
+     * Station names
+     */
+    // Fetch data
+    const q2 = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:45]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["railway"="halt"]["operator"="NMBS/SNCB"](area.belgie); node["railway"="station"]["operator"="NMBS/SNCB"](area.belgie); ); out geom;');
+    const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).text();
+    const geojson2 = osm2geojson(response2);
+
+    // Strip non-essential data
+    for (let i = 0; i < geojson2.features.length; i++) {
+        const gfp = geojson2.features[i].properties;
+        if (!gfp["name"]) continue;
+
+        var new_properties = {};
+        if (gfp["name"]) new_properties["name"] = gfp["name"];
+        if (gfp["name:nl"]) new_properties["name:nl"] = gfp["name:nl"];
+        if (gfp["name:fr"]) new_properties["name:fr"] = gfp["name:fr"];
+        new_properties["railway:ref"] = gfp["railway:ref"] ? gfp["railway:ref"] : "-"; // Always add "railway:ref" to identify stations
+
+        geojson2.features[i].properties = new_properties;
+
+        // Add stripped station feature to location features
+        geojson.features.push(geojson2.features[i]);
+    }
+
     // Cache fetched data in localStorage
     if (geojson) {
         var newCache = JSON.stringify({
-            validUntil: Date.now() + (1000 * 60 * 60 * 24 * TOWN_NAMES_CACHE_TIME),
+            validUntil: Date.now() + (1000 * 60 * 60 * 24 * LOCATION_NAMES_CACHE_TIME),
             value: geojson
         });
-        localStorage.setItem(TOWN_NAMES_CACHE, newCache);
+        localStorage.setItem(LOCATION_NAMES_CACHE, newCache);
     }
 
     return geojson;
@@ -1086,56 +1113,57 @@ getChimneys().then(
     (error) => { console.log("Error getting chimneys:", error); }
 );
 
-// Get towns/locations
-var TOWN_NAMES;
-getTownNames().then(
-    (value) => { console.log("Successfully got town names"); /* console.debug(value); */ TOWN_NAMES = value; },
-    (error) => { console.log("Error getting town names:", error); }
+// Get locations
+var LOCATION_NAMES;
+getLocationNames().then(
+    (value) => { console.log("Successfully got location names"); /* console.debug(value); */ LOCATION_NAMES = value; },
+    (error) => { console.log("Error getting location names:", error); }
 )
 
 
-function OnTownSearchGotFocus() {
-    OnTownSearch();
+function OnLocationSearchGotFocus() {
+    OnLocationSearch();
 }
 
-function OnTownSearchLostFocus() {
+function OnLocationSearchLostFocus() {
     // Delay the hiding of search results, because when the search results
     //  are clicked, there is some delay as well and the click would be skipped.
     setTimeout(() => {
-        town_search_results.classList.add("hidden");
-        town_search_results.innerHTML = "";
+        location_search_results.classList.add("hidden");
+        location_search_results.innerHTML = "";
     }, 150);
 }
 
-function OnTownSearchClear() {
-    town_search_bar.value = "";
-    if (town_marker) {
-        town_marker.removeFrom(map);
-        town_marker = null;
+function OnLocationSearchClear() {
+    location_search_bar.value = "";
+    if (location_marker) {
+        location_marker.removeFrom(map);
+        location_marker = null;
     }
-    OnTownSearch();
+    OnLocationSearch();
 }
 
-function OnTownSearch() {
-    if (town_search_bar.value.length < 3) {
-        town_search_results.classList.add("hidden");
+function OnLocationSearch() {
+    if (location_search_bar.value.length < 2) {
+        location_search_results.classList.add("hidden");
         return;
     }
 
     // Clear left-over results and show results container
-    town_search_results.classList.add("hidden");
-    town_search_results.innerHTML = "";
+    location_search_results.classList.add("hidden");
+    location_search_results.innerHTML = "";
 
     // Do the actual search
     var results = [];
-    for (var i = 0; i < TOWN_NAMES.features.length; i++) {
-        const props = TOWN_NAMES.features[i].properties;
+    for (var i = 0; i < LOCATION_NAMES.features.length; i++) {
+        const props = LOCATION_NAMES.features[i].properties;
 
-        // If searchText is included in "name" or "name:nl" or "name:fr" or "postal_code", it's a match
-        if ((props["name"] && Normalize(props["name"]).includes(Normalize(town_search_bar.value))) ||
-            (props["name:nl"] && Normalize(props["name:nl"]).includes(Normalize(town_search_bar.value))) ||
-            (props["name:fr"] && Normalize(props["name:fr"]).includes(Normalize(town_search_bar.value))) ||
-            (props["postal_code"] && Normalize(props["postal_code"]).includes(Normalize(town_search_bar.value)))
+        // If searchText is included in "name" or "name:nl" or "name:fr" or "postal_code" or "railway:ref", it's a match
+        if ((props["name"] && Normalize(props["name"]).includes(Normalize(location_search_bar.value))) ||
+            (props["name:nl"] && Normalize(props["name:nl"]).includes(Normalize(location_search_bar.value))) ||
+            (props["name:fr"] && Normalize(props["name:fr"]).includes(Normalize(location_search_bar.value))) ||
+            (props["postal_code"] && Normalize(props["postal_code"]).includes(Normalize(location_search_bar.value))) ||
+            (props["railway:ref"] && Normalize(props["railway:ref"]).includes(Normalize(location_search_bar.value)))
         ) {
             results.push(i);
         }
@@ -1143,39 +1171,39 @@ function OnTownSearch() {
 
     // Display the results
     results.forEach(res => {
-        if (res < 0 || res >= TOWN_NAMES.features.length) return;
+        if (res < 0 || res >= LOCATION_NAMES.features.length) return;
 
-        const town = TOWN_NAMES.features[res];
+        const location = LOCATION_NAMES.features[res];
 
         const item = document.createElement("div");
-        item.innerText = town.properties["name"];
-        item.setAttribute("onclick", "OnClickTownSearchResult(" + res + ")");
+        item.innerText = location.properties["name"];
+        item.setAttribute("onclick", "OnClickLocationSearchResult(" + res + ")");
 
-        town_search_results.appendChild(item);
+        location_search_results.appendChild(item);
     });
 
-    town_search_results.classList.remove("hidden");
+    location_search_results.classList.remove("hidden");
 }
 
-function OnClickTownSearchResult(index) {
+function OnClickLocationSearchResult(index) {
     // Clear left-over results and hide results container
-    town_search_results.classList.add("hidden");
-    town_search_results.innerHTML = "";
+    location_search_results.classList.add("hidden");
+    location_search_results.innerHTML = "";
 
     // Place the text of the clicked result in the search bar
-    const town = TOWN_NAMES.features[index];
-    town_search_bar.value = town.properties["name"];
+    const location = LOCATION_NAMES.features[index];
+    location_search_bar.value = location.properties["name"];
 
     // Add marker to the map
-    if (town_marker) {
-        town_marker.removeFrom(map);
-        town_marker = null;
+    if (location_marker) {
+        location_marker.removeFrom(map);
+        location_marker = null;
     }
-    if (town.geometry.type == "Point") {
-        // GeoJson coordinates are [lon, lat] and Leaflet wants [lat, lon]
-        //  and Array.reverse() will also change the data itselve
-        town_marker = L.marker([town.geometry.coordinates[1], town.geometry.coordinates[0]]).addTo(map);
-        map.flyTo([town.geometry.coordinates[1], town.geometry.coordinates[0]], 13);
+    if (location.geometry.type == "Point") {
+        // GeoJson coordinates are [lon, lat] and Leaflet wants [lat, lon].
+        // Array.reverse() will change the data itselve, so this can't be used.
+        location_marker = L.marker([location.geometry.coordinates[1], location.geometry.coordinates[0]]).addTo(map);
+        map.flyTo([location.geometry.coordinates[1], location.geometry.coordinates[0]], 13);
     }
 }
 
@@ -1227,13 +1255,13 @@ function Normalize(text) {
 }
 
 
-var town_marker; // Marker for the town search result
-var town_search = document.getElementById("town-search");
-var town_search_bar = document.getElementById("town-search-bar");
-var town_search_clear = document.getElementById("town-search-clear");
-var town_search_results = document.getElementById("town-search-results");
+var location_marker; // Marker for the location search result
+var location_search = document.getElementById("location-search");
+var location_search_bar = document.getElementById("location-search-bar");
+var location_search_clear = document.getElementById("location-search-clear");
+var location_search_results = document.getElementById("location-search-results");
 
-town_search_bar.addEventListener("input", OnTownSearch);
-town_search_bar.addEventListener("focus", OnTownSearchGotFocus);
-town_search_bar.addEventListener("blur", OnTownSearchLostFocus);
-town_search_clear.addEventListener("click", OnTownSearchClear);
+location_search_bar.addEventListener("input", OnLocationSearch);
+location_search_bar.addEventListener("focus", OnLocationSearchGotFocus);
+location_search_bar.addEventListener("blur", OnLocationSearchLostFocus);
+location_search_clear.addEventListener("click", OnLocationSearchClear);
