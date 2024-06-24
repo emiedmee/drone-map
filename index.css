@@ -64,6 +64,7 @@ body,
 #location-search-results {
   display: flex;
   flex-direction: column;
+  background-color: white;
   border: var(--search-results-border) solid white;
   border-radius: 5px;
   max-height: calc(100vh - (2 * var(--map-edge-margin)) - var(--search-bar-height));
