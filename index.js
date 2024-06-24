@@ -793,10 +793,10 @@ document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes
 
 
 // Functions to get datasets
-function buildOverpassQuery(nwr, filter) {
+function buildOverpassQuery(filterString) {
     const q = "[maxsize:16Mi][timeout:30];"
         + 'area["name"="België / Belgique / Belgien"]->.belgie;'
-        + `${nwr}${filter}(area.belgie);`
+        + filterString
         + "out geom;";
 
     return "data=" + encodeURIComponent(q);
@@ -864,7 +864,7 @@ async function getHighVoltageLines() {
     }
 
     // Fetch data
-    const q = buildOverpassQuery("way", '["power"="line"]');
+    const q = buildOverpassQuery('way["power"="line"](area.belgie);');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
@@ -879,7 +879,12 @@ async function getHighVoltageLines() {
             validUntil: Date.now() + (1000 * 60 * 60 * 24 * HIGH_VOLTAGE_LINE_CACHE_TIME),
             value: geojson
         });
-        localStorage.setItem(HIGH_VOLTAGE_LINE_CACHE, newCache);
+        try {
+            localStorage.setItem(HIGH_VOLTAGE_LINE_CACHE, newCache);
+        } catch (error) {
+            // Probably QuotaExceededError
+            console.error(error);
+        }
     }
 
     highVoltageLineLayer.addData(geojson);
@@ -899,7 +904,7 @@ async function getCellTowers() {
     }
 
     // Fetch data
-    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:30]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); ); out geom;');
+    const q = buildOverpassQuery('( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); );');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
@@ -925,7 +930,12 @@ async function getCellTowers() {
             validUntil: Date.now() + (1000 * 60 * 60 * 24 * CELL_TOWER_CACHE_TIME),
             value: geojson
         });
-        localStorage.setItem(CELL_TOWER_CACHE, newCache);
+        try {
+            localStorage.setItem(CELL_TOWER_CACHE, newCache);
+        } catch (error) {
+            // Probably QuotaExceededError
+            console.error(error);
+        }
     }
 
     cellTowerLayer.addData(geojson);
@@ -945,7 +955,7 @@ async function getWindTurbines() {
     }
 
     // Fetch data
-    const q = buildOverpassQuery("node", '["generator:source"="wind"]');
+    const q = buildOverpassQuery('node["generator:source"="wind"](area.belgie);');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
@@ -960,7 +970,12 @@ async function getWindTurbines() {
             validUntil: Date.now() + (1000 * 60 * 60 * 24 * WIND_TURBINE_CACHE_TIME),
             value: geojson
         });
-        localStorage.setItem(WIND_TURBINE_CACHE, newCache);
+        try {
+            localStorage.setItem(WIND_TURBINE_CACHE, newCache);
+        } catch (error) {
+            // Probably QuotaExceededError
+            console.error(error);
+        }
     }
 
     windTurbineLayer.addData(geojson);
@@ -980,7 +995,7 @@ async function getChimneys() {
     }
 
     // Fetch data
-    const q = buildOverpassQuery("node", '["man_made"="chimney"]');
+    const q = buildOverpassQuery('node["man_made"="chimney"](area.belgie);');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
@@ -995,7 +1010,12 @@ async function getChimneys() {
             validUntil: Date.now() + (1000 * 60 * 60 * 24 * CHIMNEY_CACHE_TIME),
             value: geojson
         });
-        localStorage.setItem(CHIMNEY_CACHE, newCache);
+        try {
+            localStorage.setItem(CHIMNEY_CACHE, newCache);
+        } catch (error) {
+            // Probably QuotaExceededError
+            console.error(error);
+        }
     }
 
     chimneyLayer.addData(geojson);
@@ -1017,7 +1037,7 @@ async function getLocationNames() {
      * Town names
      */
     // Fetch data
-    const q = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:45]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["place"="city"](area.belgie); node["place"="borough"](area.belgie); node["place"="suburb"](area.belgie); node["place"="town"](area.belgie); node["place"="village"](area.belgie); ); out geom;');
+    const q = buildOverpassQuery('( node["place"="city"](area.belgie); node["place"="borough"](area.belgie); node["place"="suburb"](area.belgie); node["place"="town"](area.belgie); node["place"="village"](area.belgie); );');
     const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
     const geojson = osm2geojson(response);
 
@@ -1039,7 +1059,7 @@ async function getLocationNames() {
      * Station names
      */
     // Fetch data
-    const q2 = "data=" + encodeURIComponent('[maxsize:16Mi][timeout:45]; area["name"="België / Belgique / Belgien"]->.belgie; ( node["railway"="halt"]["operator"="NMBS/SNCB"](area.belgie); node["railway"="station"]["operator"="NMBS/SNCB"](area.belgie); ); out geom;');
+    const q2 = buildOverpassQuery('( node["railway"="halt"]["operator"="NMBS/SNCB"](area.belgie); node["railway"="station"]["operator"="NMBS/SNCB"](area.belgie); );');
     const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).text();
     const geojson2 = osm2geojson(response2);
 
@@ -1066,7 +1086,23 @@ async function getLocationNames() {
             validUntil: Date.now() + (1000 * 60 * 60 * 24 * LOCATION_NAMES_CACHE_TIME),
             value: geojson
         });
-        localStorage.setItem(LOCATION_NAMES_CACHE, newCache);
+        try {
+            localStorage.setItem(LOCATION_NAMES_CACHE, newCache);
+        } catch (error) {
+            // Probably QuotaExceededError
+            console.error(error);
+
+            if (error.code == error.QUOTA_EXCEEDED_ERR) {
+                try {
+                    // Try clearing localStorage and saving again
+                    localStorage.clear();
+                    localStorage.setItem(LOCATION_NAMES_CACHE, newCache);
+                } catch (err) {
+                    // Probably QuotaExceededError
+                    console.error(error);
+                }
+            }
+        }
     }
 
     return geojson;
