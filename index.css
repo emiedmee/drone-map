@@ -1,10 +1,12 @@
 :root {
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
   --margin: 0px;
+  --font-size: 14px;
   --map-edge-margin: 10px;
-  --search-bar-width: 200px;
+  --search-bar-width: 250px;
   --search-bar-height: 31px;
   --search-bar-padding: 5px;
+  --search-results-border: 5px;
   --search-clear-icon-size: 15px;
 }
 
@@ -39,7 +41,7 @@ body,
 }
 
 #location-search-bar {
-  font-size: 14px;
+  font-size: var(--font-size);
   width: var(--search-bar-width);
   height: var(--search-bar-height);
   padding: var(--search-bar-padding);
@@ -60,17 +62,17 @@ body,
 #location-search-results {
   display: flex;
   flex-direction: column;
-  border: 5px solid white;
+  border: var(--search-results-border) solid white;
   border-radius: 5px;
   max-height: calc(100vh - (2 * var(--map-edge-margin)) - var(--search-bar-height));
   overflow-y: scroll;
 }
 
 #location-search-results > div {
-  font-size: 14px;
+  font-size: var(--font-size);
   padding: 1px 0px;
   background-color: white;
-  border-bottom: 0.5px solid lightgray;
+  border-bottom: 1px solid lightgray;
   cursor: default;
 }
 

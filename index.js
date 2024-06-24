@@ -409,7 +409,7 @@ function renderGeoZone(geozone) {
     var hour = now.getUTCHours();
     if (hour < 10)
         hour = 0 + '' + hour;
-    
+
     var minute = now.getUTCMinutes();
     if (minute < 10)
         minute = 0 + '' + minute;
@@ -568,8 +568,8 @@ function parseTimeField(d) {
     }
 
     var now = new Date();
-    var offset = now.getTimezoneOffset() / 60; // hour offset to substract from UTC hours
-                                               // UTC+2 => getTimezoneOffset() = -120
+    // Hour offset to substract from UTC hours. UTC+2 => getTimezoneOffset() = -120
+    var offset = now.getTimezoneOffset() / 60;
 
     var s = null;
     if (d)
@@ -1176,7 +1176,7 @@ function OnLocationSearch() {
         const location = LOCATION_NAMES.features[res];
 
         const item = document.createElement("div");
-        item.innerText = location.properties["name"];
+        item.innerHTML = location.properties["name"];
         item.setAttribute("onclick", "OnClickLocationSearchResult(" + res + ")");
 
         location_search_results.appendChild(item);
@@ -1244,6 +1244,12 @@ function Normalize(text) {
             case "û":
             case "ü":
                 normalized += "u";
+                break;
+            case " ":
+            case "-":
+            case "'":
+            case "/":
+                // remove spaces, dashes, ...
                 break;
             default:
                 normalized += text[i];
