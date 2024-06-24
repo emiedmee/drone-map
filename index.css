@@ -1,6 +1,7 @@
 :root {
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
   --margin: 0px;
+  --map-edge-margin: 10px;
   --search-bar-width: 200px;
   --search-bar-height: 31px;
   --search-bar-padding: 5px;
@@ -29,7 +30,7 @@ body,
   position: absolute;
   width: var(--search-bar-width);
   height: var(--search-bar-height);
-  top: 10px;
+  top: var(--map-edge-margin);
   left: calc((100% - var(--search-bar-width)) / 2);
 }
 
@@ -61,6 +62,8 @@ body,
   flex-direction: column;
   border: 5px solid white;
   border-radius: 5px;
+  max-height: calc(100vh - (2 * var(--map-edge-margin)) - var(--search-bar-height));
+  overflow-y: scroll;
 }
 
 #location-search-results > div {
@@ -77,4 +80,15 @@ body,
 
 .hidden {
   display: none !important;
+}
+
+/* https://stackoverflow.com/a/54410301 */
+.disable-scrollbars::-webkit-scrollbar {
+  background: transparent; /* Chrome/Safari/Webkit */
+  width: 0px;
+}
+
+.disable-scrollbars {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE 10+ */
 }
