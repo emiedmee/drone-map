@@ -215,27 +215,6 @@ const railway_delete = {
 };
 
 // Create custom icons
-const iconCellTower = L.divIcon({
-  iconSize: [60, 60],
-  iconAnchor: [31, 50],
-  popupAnchor: [0, -45],
-  className: "",
-  html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m7.3 14.7 1.2-1.2c-1-1-1.5-2.3-1.5-3.5 0-1.3.5-2.6 1.5-3.5L7.3 5.3c-1.3 1.3-2 3-2 4.7s.7 3.4 2 4.7zM19.1 2.9l-1.2 1.2c1.6 1.6 2.4 3.8 2.4 5.9 0 2.1-.8 4.3-2.4 5.9l1.2 1.2c2-2 2.9-4.5 2.9-7.1 0-2.6-1-5.1-2.9-7.1z"></path><path d="M6.1 4.1 4.9 2.9C3 4.9 2 7.4 2 10c0 2.6 1 5.1 2.9 7.1l1.2-1.2c-1.6-1.6-2.4-3.8-2.4-5.9 0-2.1.8-4.3 2.4-5.9zm10.6 10.6c1.3-1.3 2-3 2-4.7-.1-1.7-.7-3.4-2-4.7l-1.2 1.2c1 1 1.5 2.3 1.5 3.5 0 1.3-.5 2.6-1.5 3.5l1.2 1.2zM14.5 10c0-1.38-1.12-2.5-2.5-2.5S9.5 8.62 9.5 10c0 .76.34 1.42.87 1.88L7 22h2l.67-2h4.67l.66 2h2l-3.37-10.12c.53-.46.87-1.12.87-1.88zm-4.17 8L12 13l1.67 5h-3.34z"></path></svg>'
-});
-const iconWindTurbine = L.divIcon({
-  iconSize: [35, 60],
-  iconAnchor: [23, 55],
-  popupAnchor: [0, -60],
-  className: "",
-  html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 375 646"><g><path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 275.3125 217.898438 C 275.3125 232.601562 263.386719 244.515625 248.675781 244.515625 C 233.960938 244.515625 222.035156 232.601562 222.035156 217.898438 C 222.035156 203.199219 233.960938 191.285156 248.675781 191.285156 C 263.386719 191.285156 275.3125 203.199219 275.3125 217.898438 Z M 275.3125 217.898438 "/><path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 294.621094 191.046875 C 367.789062 59.125 380.304688 6.507812 373.273438 2.453125 C 366.265625 -1.597656 326.921875 35.496094 249.238281 164.679688 C 268.589844 164.886719 285.449219 175.433594 294.621094 191.046875 Z M 294.621094 191.046875 "/><path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 195.390625 217.898438 C 195.390625 208.363281 197.9375 199.425781 202.34375 191.675781 C 51.757812 194.339844 0 209.800781 0 217.898438 C 0 225.992188 51.75 241.460938 202.332031 244.117188 C 197.9375 236.375 195.390625 227.441406 195.390625 217.898438 Z M 195.390625 217.898438 "/><path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 294.675781 244.675781 C 285.53125 260.308594 268.691406 270.875 249.328125 271.109375 C 326.960938 400.136719 366.257812 437.207031 373.285156 433.15625 C 380.304688 429.101562 367.808594 376.515625 294.675781 244.675781 Z M 294.675781 244.675781 "/><path style=" stroke:none;fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;" d="M 222.035156 277.371094 L 222.035156 643.835938 L 275.320312 643.835938 L 275.320312 361.949219 C 260.035156 339.375 242.40625 311.578125 222.035156 277.371094 Z M 222.035156 277.371094 "/></g></svg>'
-});
-const iconChimney = L.divIcon({
-  iconSize: [56, 56],
-  iconAnchor: [32, 50],
-  popupAnchor: [0, -56],
-  className: "",
-  html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14"><path id="rect4495" d="M 10.318359 0 A 1.741594 1.2970195 0 0 0 8.6601562 0.90039062 A 1.1655669 0.92076844 0 0 0 8.2539062 0.84179688 A 1.1655669 0.92076844 0 0 0 7.0898438 1.7617188 A 1.1655669 0.92076844 0 0 0 7.0917969 1.7851562 A 0.82779479 0.70560503 0 0 0 7 1.7792969 A 0.82779479 0.70560503 0 0 0 6.171875 2.484375 A 0.82779479 0.70560503 0 0 0 7 3.1894531 A 0.82779479 0.70560503 0 0 0 7.8125 2.6152344 A 1.1655669 0.92076844 0 0 0 8.2539062 2.6835938 A 1.1655669 0.92076844 0 0 0 9.2050781 2.2929688 A 1.741594 1.2970195 0 0 0 10.318359 2.59375 A 1.741594 1.2970195 0 0 0 12.058594 1.296875 A 1.741594 1.2970195 0 0 0 10.318359 0 z M 6.1289062 4.59375 L 5.7421875 14 L 8.2578125 14 L 7.859375 4.59375 L 6.1289062 4.59375 z " style="fill:#555555;fill-opacity:1;stroke:none"/></svg>'
-});
 const iconNMBS = '<svg xmlns="http://www.w3.org/2000/svg" class="icon-nmbs" viewBox="0 0 64 64"><path d="M32 50.7C17.4 50.7 5.5 42.3 5.5 32S17.4 13.3 32 13.3 58.5 21.7 58.5 32 46.6 50.7 32 50.7m0-39.6C14.3 11.1 0 20.4 0 32s14.3 20.9 32 20.9S64 43.5 64 32 49.7 11.1 32 11.1"></path><path d="M33.4 43h-3.5c-1.1 0-1.7-.5-1.7-1.4v-8c0-.5.2-.7.7-.7h4.5a5.2 5.2 0 0 1 5.2 5.1 4.94 4.94 0 0 1-5.2 5m-5.2-20.4c0-.9.6-1.4 1.7-1.4h2.3a4.31 4.31 0 0 1 4.5 4.3 4.46 4.46 0 0 1-4.5 4.4h-3.3c-.5 0-.7-.2-.7-.7zm14.1 8.9c-.7-.3-.7-.4 0-.8a5.91 5.91 0 0 0 2.8-5.2c0-3.9-5.2-7.8-13.5-7.8a22 22 0 0 0-13.3 4.4c-.7.6-.6.9-.4 1.1l1.2 1.4c.4.4.6.3.8.1.9-.7 1-.3 1 .5V39c0 .8-.1 1.2-1 .5-.2-.2-.4-.3-.8.1l-1.3 1.5c-.2.3-.4.6.4 1.1a24.7 24.7 0 0 0 13.6 4.3c9.3 0 15.1-3.9 15.1-9.1.1-3.5-2.8-5.2-4.6-5.9"></path></svg>';
 
 // Create styles for GeoJSON layers
@@ -653,7 +632,6 @@ function onEachCellTower(feature, layer) {
 }
 /* pointToLayerCellTower(feature, latlng) */
 function pointToLayerCellTower(feature, latlng) {
-  // return L.marker(latlng, { icon: cellTowerIcon });
   return L.circleMarker(latlng, markerOptionsCellTower);
 }
 
@@ -669,7 +647,6 @@ function onEachWindTurbine(feature, layer) {
 }
 /* pointToLayerWindTurbine(feature, latlng) */
 function pointToLayerWindTurbine(feature, latlng) {
-  // return L.marker(latlng, { icon: iconWindTurbine });
   return L.circleMarker(latlng, markerOptionsWindTurbine);
 }
 
@@ -685,7 +662,6 @@ function onEachChimney(feature, layer) {
 }
 /* pointToLayerWindTurbine(feature, latlng) */
 function pointToLayerChimney(feature, latlng) {
-  // return L.marker(latlng, { icon: iconChimney });
   return L.circleMarker(latlng, markerOptionsChimney);
 }
 
@@ -825,7 +801,6 @@ async function getGeoZones() {
   // response.features.sort((a, b) => b.properties.Shape__Area - a.properties.Shape__Area)
 
   geozoneLayer.addData(response);
-
   return response;
 }
 
@@ -1302,7 +1277,6 @@ function Normalize(text) {
 
   return normalized;
 }
-
 
 var location_marker; // Marker for the location search result
 var location_search = document.getElementById("location-search");
