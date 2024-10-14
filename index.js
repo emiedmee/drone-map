@@ -749,6 +749,9 @@ map.on('locationfound', (e) => { console.log('Found location:', e.latlng); });
 map.on('locationerror', (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
 
 
+// Add scale control
+var scaleControl = L.control.scale().addTo(map);
+
 // Create layer controls
 var baseMaps = {
     "OpenStreetMap": osm,
