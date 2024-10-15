@@ -328,9 +328,9 @@ function filterGeozone(feature, layer) {
      * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
      *  they do a hard-coded conversion from meter to feet, regardless of the unit.
      */
-    if (props.lowerLimit && props.lowerLimit <= 125) // m
+    if (props.lowerLimit <= 125) // m
       show = true;
-    // if (props.lowerAltitudeUnit && props.lowerLimit) {
+    // if (props.lowerAltitudeUnit) {
     //   if (props.lowerAltitudeUnit == "ft") {
     //     if (props.lowerLimit <= 410) // ft
     //       show = true;
