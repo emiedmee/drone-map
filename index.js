@@ -8,6 +8,12 @@ const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datas
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
+const GEO_API_HEIGHT_VL_URL = 'https://geo.api.vlaanderen.be/DHMV/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&feature_count=50&layers=DHMVII_DTM_1m&query_layers=DHMVII_DTM_1m&crs=EPSG:31370&info_format=application/geo%2bjson';
+const GEO_API_HEIGHT_WA_URL = 'https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer/identify?f=json&tolerance=1&sr=31370&layers=top&geometryType=esriGeometryPoint&returnGeometry=false&returnFieldName=false&returnUnformattedValues=false';
+
+const WGS84 = '+proj=longlat +datum=WGS84 +no_defs +type=crs';
+const BD72 = '+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs';
+const GEO_API_OFFSET = 25;
 
 const NOTAM_CACHE = "notam-cache";
 const NOTAM_CACHE_TIME = 1; // 1D
@@ -243,6 +249,44 @@ function fl2ft(fl) {
 }
 function ft2fl(ft) {
   return ft / 100;
+}
+
+/**
+ * Convert `BD72`/`EPSG:31370` coordinates to `WGS84`/`EPSG:4326` using GeoAPI from Vlaanderen.be
+ * 
+ * @param {Object} bd72 
+ * @param {Number} bd72.x Easting or x
+ * @param {Number} bd72.y Northing or y
+ */
+function BD72toWGS84(bd72) {
+  if (bd72 && bd72.x && bd72.y) {
+    const wgs84 = proj4(BD72, WGS84, [bd72.x, bd72.y]);
+    return {
+      lat: parseFloat(wgs84[1]),
+      lng: parseFloat(wgs84[0]),
+    };
+  } else {
+    return;
+  }
+}
+
+/**
+ * Convert `WGS84`/`EPSG:4326` coordinates to `BD72`/`EPSG:31370` using GeoAPI from Vlaanderen.be
+ * 
+ * @param {Object} wgs84 
+ * @param {Number} wgs84.lat Latitude
+ * @param {Number} wgs84.lng Longitude
+ */
+function WGS84toBD72(wgs84) {
+  if (wgs84 && wgs84.lat && wgs84.lng) {
+    const bd72 = proj4(WGS84, BD72, [wgs84.lng, wgs84.lat]);
+    return {
+      x: parseFloat(bd72[0]),
+      y: parseFloat(bd72[1]),
+    };
+  } else {
+    return;
+  }
 }
 
 
@@ -597,6 +641,19 @@ function createGeozonePopupContent(feature) {
   }
 }
 function onEachGeozone(feature, layer) {
+  // When geozone is clicked, replace popup content to include the height of the clicked location
+  layer.on('click', e => {
+    if (e.sourceTarget?.feature.properties && e.latlng) {
+      getHeight(e.latlng).then(height => {
+        e.sourceTarget.setPopupContent(
+          createGeozonePopupContent(e.sourceTarget.feature)
+          + `<br>Surface height: ${Math.round(height * 100) / 100} m`
+        );
+      });
+    }
+  });
+
+  // Set default popup content
   if (feature.properties) {
     layer.bindPopup(createGeozonePopupContent(feature));
   }
@@ -1112,48 +1169,48 @@ async function getLocationNames() {
 var NOTAMS;
 getNotams().then(
   (value) => { console.log("Successfully got NOTAMS"); /* console.debug(value); */ NOTAMS = value; },
-  (error) => { console.log("Error getting NOTAMS:", error); }
+  (error) => { console.error("Error getting NOTAMS:", error); }
 );
 getGeoZones().then(
   (value) => { console.log("Successfully got no-fly zones"); /* console.debug(value); */ },
-  (error) => { console.log("Error getting no-fly zones:", error); }
+  (error) => { console.error("Error getting no-fly zones:", error); }
 );
 
 // Create items for Railway lines
 getRailways().then(
   (value) => { console.log("Successfully got railways"); /* console.debug(value); */ },
-  (error) => { console.log("Error getting railways:", error); }
+  (error) => { console.error("Error getting railways:", error); }
 );
 
 // Create items for High-voltage lines
 getHighVoltageLines().then(
   (value) => { console.log("Successfully got high-voltage lines"); /* console.debug(value); */ },
-  (error) => { console.log("Error getting high-voltage lines:", error); }
+  (error) => { console.error("Error getting high-voltage lines:", error); }
 );
 
 // Create items for Cell towers
 getCellTowers().then(
   (value) => { console.log("Successfully got cell towers"); /* console.debug(value); */ },
-  (error) => { console.log("Error getting cell towers:", error); }
+  (error) => { console.error("Error getting cell towers:", error); }
 );
 
 // Create items for Wind turbines
 getWindTurbines().then(
   (value) => { console.log("Successfully got wind turbines"); /* console.debug(value); */ },
-  (error) => { console.log("Error getting wind turbines:", error); }
+  (error) => { console.error("Error getting wind turbines:", error); }
 );
 
 // Create items for Chimneys
 getChimneys().then(
   (value) => { console.log("Successfully got chimneys"); /* console.debug(value); */ },
-  (error) => { console.log("Error getting chimneys:", error); }
+  (error) => { console.error("Error getting chimneys:", error); }
 );
 
 // Get locations
 var LOCATION_NAMES;
 getLocationNames().then(
   (value) => { console.log("Successfully got location names"); /* console.debug(value); */ LOCATION_NAMES = value; },
-  (error) => { console.log("Error getting location names:", error); }
+  (error) => { console.error("Error getting location names:", error); }
 )
 
 
@@ -1317,3 +1374,95 @@ location_search_bar.addEventListener("input", OnLocationSearch);
 location_search_bar.addEventListener("focus", OnLocationSearchGotFocus);
 location_search_bar.addEventListener("blur", OnLocationSearchLostFocus);
 location_search_clear.addEventListener("click", OnLocationSearchClear);
+
+
+/*
+ ***********************************
+ *         SURFACE HEIGHT          *
+ ***********************************
+ */
+
+/**
+ * Try to get the surface height of a position using geo services from Flanders
+ * 
+ * @param {Array<Number>} bbox_bd72 BD72 coordinates of the bbox in BD72 coordinates in order: xmin, ymin, xmax, ymax
+ * @returns Surface height in meters if available
+ */
+async function getHeightVL(bbox_bd72) {
+  const url = `${GEO_API_HEIGHT_VL_URL}&bbox=${bbox_bd72.join(',')}&width=${2 * GEO_API_OFFSET}&height=${2 * GEO_API_OFFSET}&i=${GEO_API_OFFSET}&j=${GEO_API_OFFSET}`;
+  const response = await (await fetch(url)).json();
+  
+  const height = response?.features?.at(0)?.properties['Pixel Value'];
+  if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
+    return undefined;
+  } else {
+    return parseFloat(height);
+  }
+}
+
+/**
+ * Try to get the surface height of a position using geo services from Wallonia
+ * 
+ * @param {Object} pos_bd72 BD72 coordinates of the clicked position
+ * @param {Number} pos_bd72.x Easting or x
+ * @param {Number} pos_bd72.y Northing or y
+ * @param {Array<Number>} bbox_bd72 BD72 coordinates of the bbox in BD72 coordinates, in order: xmin, ymin, xmax, ymax
+ * @returns Surface height in meters if available
+ */
+async function getHeightWA(pos_bd72, bbox_bd72) {
+  const url = `${GEO_API_HEIGHT_WA_URL}&imageDisplay=${2 * GEO_API_OFFSET},${2 * GEO_API_OFFSET},96&geometry={"x":${pos_bd72.x},"y":${pos_bd72.y}}&mapExtent=${bbox_bd72.join(',')}`;
+  const response = await (await fetch(url)).json();
+  
+  const height = response?.results?.at(0)?.attributes['Pixel Value'];
+  if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
+    return undefined;
+  } else {
+    return parseFloat(height);
+  }
+}
+
+/**
+ * Get the surface height at a given position
+ * 
+ * @param {Object} mapLatLng Position in WGS84 coordinates
+ * @param {Number} mapLatLng.lat Latitude
+ * @param {Number} mapLatLng.lng Longitude
+ * @returns Surface height in meters
+ */
+async function getHeight(mapLatLng) {
+  const location_cp = map.latLngToContainerPoint(mapLatLng);
+
+  const ne_cp = {
+    x: location_cp.x + GEO_API_OFFSET,
+    y: location_cp.y - GEO_API_OFFSET,
+  };
+  const sw_cp = {
+    x: location_cp.x - GEO_API_OFFSET,
+    y: location_cp.y + GEO_API_OFFSET,
+  };
+
+  // const view = {
+  //   x: Math.abs(ne_cp.x - sw_cp.x), // 2 x Offset
+  //   y: Math.abs(ne_cp.y - sw_cp.y), // 2 x Offset
+  // };
+  // const position = {
+  //   x: view.x / 2, // Offset
+  //   y: view.y / 2, // Offset
+  // };
+
+  const ne_bd72 = WGS84toBD72(map.containerPointToLatLng(ne_cp));
+  const sw_bd72 = WGS84toBD72(map.containerPointToLatLng(sw_cp));
+
+  const bbox_bd72 = [sw_bd72.x, sw_bd72.y, ne_bd72.x, ne_bd72.y]; // <xmin>, <ymin>, <xmax>, <ymax>
+  const pos_bd72 = WGS84toBD72(mapLatLng);
+
+  const height_VL = await getHeightVL(bbox_bd72);
+  const height_WA = await getHeightWA(pos_bd72, bbox_bd72);
+  if (height_VL !== undefined) {
+    return height_VL;
+  } else if (height_WA !== undefined) {
+    return height_WA;
+  } else {
+    return undefined;
+  }
+}
