@@ -11,9 +11,11 @@ const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const GEO_API_HEIGHT_VL_URL = 'https://geo.api.vlaanderen.be/DHMV/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&feature_count=50&layers=DHMVII_DTM_1m&query_layers=DHMVII_DTM_1m&crs=EPSG:31370&info_format=application/geo%2bjson';
 const GEO_API_HEIGHT_WA_URL = 'https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer/identify?f=json&tolerance=1&sr=31370&layers=top&geometryType=esriGeometryPoint&returnGeometry=false&returnFieldName=false&returnUnformattedValues=false';
 
+const GEO_API_HEIGHT_VL_BBOX = { N: 51.51, E: 5.92, S: 50.68, W: 2.54 };
+const GEO_API_HEIGHT_WA_BBOX = { N: 50.85, E: 6.50, S: 49.45, W: 2.75 };
+const GEO_API_OFFSET = 25;
 const WGS84 = '+proj=longlat +datum=WGS84 +no_defs +type=crs';
 const BD72 = '+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs';
-const GEO_API_OFFSET = 25;
 
 const NOTAM_CACHE = "notam-cache";
 const NOTAM_CACHE_TIME = 1; // 1D
@@ -631,7 +633,7 @@ function createGeozonePopupContent(feature) {
   if (feature.properties) {
     const props = feature.properties;
     return (
-      `${props.name}`
+      `<b>${props.name}</b>`
       + `<br>Lower limit: ${parseHeight(props.lowerLimit, props.lowerAltitudeUnit)} ${props.lowerAltitudeReference}`
       + `<br>Upper limit: ${parseHeight(props.upperLimit, props.upperAltitudeUnit)} ${props.upperAltitudeReference}`
       + `<br>Schedule: ${parseTimeField(props.TimeField)}`
@@ -1400,6 +1402,23 @@ location_search_clear.addEventListener("click", OnLocationSearchClear);
  */
 
 /**
+ * Check if a position is inside a bounding box
+ * 
+ * @param {Object} latlng Position
+ * @param {Number} latlng.lat Latitude
+ * @param {Number} latlng.lng Longitude
+ * @param {Object} bbox Bounding box
+ * @param {Number} bbox.N Max latitude
+ * @param {Number} bbox.E Max longitude
+ * @param {Number} bbox.S Min latitude
+ * @param {Number} bbox.W Min longitude
+ */
+function isLatLngInsideBbox(latlng, bbox) {
+  return bbox.S <= latlng.lat && latlng.lat <= bbox.N
+      && bbox.W <= latlng.lng && latlng.lng <= bbox.E;
+}
+
+/**
  * Try to get the surface height of a position using geo services from Flanders
  * 
  * @param {Array<Number>} bbox_bd72 BD72 coordinates of the bbox in BD72 coordinates in order: xmin, ymin, xmax, ymax
@@ -1473,13 +1492,20 @@ async function getHeight(mapLatLng) {
   const bbox_bd72 = [sw_bd72.x, sw_bd72.y, ne_bd72.x, ne_bd72.y]; // <xmin>, <ymin>, <xmax>, <ymax>
   const pos_bd72 = WGS84toBD72(mapLatLng);
 
-  const height_VL = await getHeightVL(bbox_bd72);
-  const height_WA = await getHeightWA(pos_bd72, bbox_bd72);
-  if (height_VL !== undefined) {
-    return height_VL;
-  } else if (height_WA !== undefined) {
-    return height_WA;
-  } else {
-    return undefined;
+  // Only send request if location is in that part of the country
+  var heightVL = undefined;
+  var heightWA = undefined;
+  if (isLatLngInsideBbox(mapLatLng, GEO_API_HEIGHT_VL_BBOX)) {
+    heightVL = await getHeightVL(bbox_bd72);
   }
+  if (isLatLngInsideBbox(mapLatLng, GEO_API_HEIGHT_WA_BBOX)) {
+    heightWA = await getHeightWA(pos_bd72, bbox_bd72);
+  }
+
+  if (heightVL !== undefined) {
+    return heightVL;
+  } else if (heightWA !== undefined) {
+    return heightWA;
+  }
+  return undefined;
 }
