@@ -848,6 +848,18 @@ document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes
   }
 });
 
+// Show surface height of the location when clicking on the map
+map.on('click', e => {
+  if (e.latlng) {
+    const popup = L.popup().setLatLng(e.latlng).setContent('Surface height: ---').openOn(map);
+    getHeight(e.latlng).then(height => {
+      if (height) {
+        popup.setContent(`Surface height: ${Math.round(height * 100) / 100} m`);
+      }
+    });
+  }
+});
+
 
 /*
  ***********************************
