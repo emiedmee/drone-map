@@ -520,29 +520,29 @@ function parseHeight(height, unit) {
    */
   // height unit is always "m"
   if (PREFERRED_UNIT == "ft") {
-    return `${parseInt(m2ft(height)).toFixed(0)} ${PREFERRED_UNIT}`;
+    return `${parseInt(m2ft(height))} ${PREFERRED_UNIT}`;
   } else if (PREFERRED_UNIT == "m") {
-    return `${parseInt(height).toFixed(0)} ${PREFERRED_UNIT}`;
+    return `${parseInt(height)} ${PREFERRED_UNIT}`;
   }
 
   // if (PREFERRED_UNIT == unit) {
-  //   return parseInt(height).toFixed(0) + " " + unit;
+  //   return parseInt(height) + " " + unit;
   // } else {
   //   if (PREFERRED_UNIT == "ft") {
   //     if (unit == "FL") {
-  //       return `${parseInt(fl2ft(height)).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+  //       return `${parseInt(fl2ft(height))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
   //     } else if (unit == "ft") {
-  //       return `${parseInt(height).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+  //       return `${parseInt(height)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
   //     } else if (unit == "m") {
-  //       return `${parseInt(m2ft(height)).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+  //       return `${parseInt(m2ft(height))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
   //     }
   //   } else if (PREFERRED_UNIT == "m") {
   //     if (unit == "FL") {
-  //       return `${parseInt(ft2m(fl2ft(height))).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+  //       return `${parseInt(ft2m(fl2ft(height)))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
   //     } else if (unit == "ft") {
-  //       return `${parseInt(ft2m(height)).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+  //       return `${parseInt(ft2m(height))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
   //     } else if (unit == "m") {
-  //       return `${parseInt(height).toFixed(0)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
+  //       return `${parseInt(height)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
   //     }
   //   }
   // }
@@ -583,14 +583,22 @@ function parseTimeField(d) {
   local = "<br>&nbsp;\u2022 Local: " + local.substring(2);
   return utc + local;
 }
-function onEachGeozone(feature, layer) {
+function createGeozonePopupContent(feature) {
   if (feature.properties) {
     const props = feature.properties;
-    layer.bindPopup(`${props.name}`
+    return (
+      `${props.name}`
       + `<br>Lower limit: ${parseHeight(props.lowerLimit, props.lowerAltitudeUnit)} ${props.lowerAltitudeReference}`
       + `<br>Upper limit: ${parseHeight(props.upperLimit, props.upperAltitudeUnit)} ${props.upperAltitudeReference}`
       + `<br>Schedule: ${parseTimeField(props.TimeField)}`
     );
+  } else {
+    return "";
+  }
+}
+function onEachGeozone(feature, layer) {
+  if (feature.properties) {
+    layer.bindPopup(createGeozonePopupContent(feature));
   }
 }
 /* pointToLayerGeozone(feature, latlng) */
