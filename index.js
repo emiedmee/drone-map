@@ -28,7 +28,7 @@ const LOCATION_NAMES_CACHE_TIME = 180; // 6M
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
-const railway_fix = {
+const RAILWAY_FIX = {
   // Gent - Brugge
   "1953": "50D",
   "1969": "50A",
@@ -137,7 +137,7 @@ const railway_fix = {
   "2017": "11",
   "748": "11A",
 };
-const railway_delete = {
+const RAILWAY_DELETE = {
   // Y.Oost Driehoek Ledeberg - TW Melle
   "192": "192",
   "1958": "1958",
@@ -214,8 +214,39 @@ const railway_delete = {
   "2008": "2008",
 };
 
-// Create custom icons
-const iconNMBS = '<svg xmlns="http://www.w3.org/2000/svg" class="icon-nmbs" viewBox="0 0 64 64"><path d="M32 50.7C17.4 50.7 5.5 42.3 5.5 32S17.4 13.3 32 13.3 58.5 21.7 58.5 32 46.6 50.7 32 50.7m0-39.6C14.3 11.1 0 20.4 0 32s14.3 20.9 32 20.9S64 43.5 64 32 49.7 11.1 32 11.1"></path><path d="M33.4 43h-3.5c-1.1 0-1.7-.5-1.7-1.4v-8c0-.5.2-.7.7-.7h4.5a5.2 5.2 0 0 1 5.2 5.1 4.94 4.94 0 0 1-5.2 5m-5.2-20.4c0-.9.6-1.4 1.7-1.4h2.3a4.31 4.31 0 0 1 4.5 4.3 4.46 4.46 0 0 1-4.5 4.4h-3.3c-.5 0-.7-.2-.7-.7zm14.1 8.9c-.7-.3-.7-.4 0-.8a5.91 5.91 0 0 0 2.8-5.2c0-3.9-5.2-7.8-13.5-7.8a22 22 0 0 0-13.3 4.4c-.7.6-.6.9-.4 1.1l1.2 1.4c.4.4.6.3.8.1.9-.7 1-.3 1 .5V39c0 .8-.1 1.2-1 .5-.2-.2-.4-.3-.8.1l-1.3 1.5c-.2.3-.4.6.4 1.1a24.7 24.7 0 0 0 13.6 4.3c9.3 0 15.1-3.9 15.1-9.1.1-3.5-2.8-5.2-4.6-5.9"></path></svg>';
+
+/***********************************
+ *      CONVERSION FUNCTIONS       *
+ ***********************************/
+
+// 1 foot = 0.3048 metres
+function ft2m(ft) {
+  return ft * 0.3048;
+}
+function m2ft(m) {
+  return m / 0.3048;
+}
+
+// 1 nautical mile = 1.852 kilometres
+function nm2km(nm) {
+  return nm * 1.852;
+}
+function km2nm(km) {
+  return km / 1.852;
+}
+
+// flight levels = hectofeet
+function fl2ft(fl) {
+  return fl * 100;
+}
+function ft2fl(ft) {
+  return ft / 100;
+}
+
+
+/***********************************
+ *       MAP LAYER RENDERING       *
+ ***********************************/
 
 // Create styles for GeoJSON layers
 const styleGeozoneActive = {
@@ -275,32 +306,6 @@ const markerOptionsChimney = {
   fillOpacity: 0.8
 };
 
-
-// 1 foot = 0.3048 metres
-function ft2m(ft) {
-  return ft * 0.3048;
-}
-function m2ft(m) {
-  return m / 0.3048;
-}
-
-// 1 nautical mile = 1.852 kilometres
-function nm2km(nm) {
-  return nm * 1.852;
-}
-function km2nm(km) {
-  return km / 1.852;
-}
-
-// flight levels = hectofeet
-function fl2ft(fl) {
-  return fl * 100;
-}
-function ft2fl(ft) {
-  return ft / 100;
-}
-
-
 // var someLayer = L.GeoJSON(geoJsonFeatureData, {
 //   filter: whether to show a feature or not
 //   style: for general styling of the features
@@ -323,9 +328,9 @@ function filterGeozone(feature, layer) {
      * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
      *  they do a hard-coded conversion from meter to feet, regardless of the unit.
      */
-    if (props.lowerLimit <= 125) // m
+    if (props.lowerLimit && props.lowerLimit <= 125) // m
       show = true;
-    // if (props.lowerAltitudeUnit) {
+    // if (props.lowerAltitudeUnit && props.lowerLimit) {
     //   if (props.lowerAltitudeUnit == "ft") {
     //     if (props.lowerLimit <= 410) // ft
     //       show = true;
@@ -586,7 +591,6 @@ function onEachGeozone(feature, layer) {
 }
 /* pointToLayerGeozone(feature, latlng) */
 
-
 // Functions to render Railway features
 /* filterRailway(feature, layer) */
 /* styleRailway(feature) */
@@ -599,13 +603,11 @@ function onEachRailway(feature, layer) {
 }
 /* pointToLayerRailway(feature, latlng) */
 
-
 // Functions to render HighVoltageLine features
 /* filterHighVoltageLine(feature, layer) */
 /* styleHighVoltageLine(feature) */
 /* onEachHighVoltageLine(feature, layer) */
 /* pointToLayerHighVoltageLine(feature, latlng) */
-
 
 // Functions to render CellTower features
 /* filterCellTower(feature, layer) */
@@ -635,7 +637,6 @@ function pointToLayerCellTower(feature, latlng) {
   return L.circleMarker(latlng, markerOptionsCellTower);
 }
 
-
 // Functions to render WindTurbine features
 /* filterWindTurbine(feature, layer) */
 /* styleWindTurbine(feature) */
@@ -649,7 +650,6 @@ function onEachWindTurbine(feature, layer) {
 function pointToLayerWindTurbine(feature, latlng) {
   return L.circleMarker(latlng, markerOptionsWindTurbine);
 }
-
 
 // Functions to render Chimney features
 /* filterChimney(feature, layer) */
@@ -665,6 +665,10 @@ function pointToLayerChimney(feature, latlng) {
   return L.circleMarker(latlng, markerOptionsChimney);
 }
 
+
+/***********************************
+ *               MAP               *
+ ***********************************/
 
 // Define overlay layers
 var geozoneLayer = L.geoJSON([], {
@@ -692,7 +696,6 @@ var chimneyLayer = L.geoJSON([], {
   pointToLayer: pointToLayerChimney,
 });
 
-
 // Define base tile layers
 var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   minZoom: 9,
@@ -715,7 +718,6 @@ var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution" target="_blank">CARTO</a>'
 });
 
-
 // Initialize the map + set active overlays
 var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLineLayer, cellTowerLayer, windTurbineLayer, chimneyLayer] }).fitWorld();
 
@@ -723,7 +725,6 @@ var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLi
 map.locate({ setView: true, maxZoom: 16 });
 map.on('locationfound', (e) => { console.log('Found location:', e.latlng); });
 map.on('locationerror', (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
-
 
 // Add scale control
 var scaleControl = L.control.scale().addTo(map);
@@ -772,6 +773,10 @@ document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes
 });
 
 
+/***********************************
+ *         DATA AQUISITION         *
+ ***********************************/
+
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
   const q = "[maxsize:16Mi][timeout:30];"
@@ -812,15 +817,15 @@ async function getRailways() {
 
   // Fix missing labels for railway sections
   for (let i = 0; i < response.features.length; i++) {
-    if (railway_delete[response.features[i].properties["ls_id"]]) {
+    if (RAILWAY_DELETE[response.features[i].properties["ls_id"]]) {
       // Check first if this section should be deleted
       continue;
     } else if (/\d+.*?L\/\d+/.test(response.features[i].properties["label"])) {
       // Filter out all non-mainline railway sections
       continue;
-    } else if (railway_fix[response.features[i].properties["ls_id"]]) {
+    } else if (RAILWAY_FIX[response.features[i].properties["ls_id"]]) {
       // Apply fix for missing label
-      response.features[i].properties["label"] = railway_fix[response.features[i].properties["ls_id"]]
+      response.features[i].properties["label"] = RAILWAY_FIX[response.features[i].properties["ls_id"]]
     }
     // Include section in new object if it's not deleted
     new_response.features.push(response.features[i]);
@@ -1136,6 +1141,12 @@ getLocationNames().then(
 )
 
 
+/***********************************
+ *           SEARCH BAR            *
+ ***********************************/
+
+const ICON_NMBS = '<svg xmlns="http://www.w3.org/2000/svg" class="icon-nmbs" viewBox="0 0 64 64"><path d="M32 50.7C17.4 50.7 5.5 42.3 5.5 32S17.4 13.3 32 13.3 58.5 21.7 58.5 32 46.6 50.7 32 50.7m0-39.6C14.3 11.1 0 20.4 0 32s14.3 20.9 32 20.9S64 43.5 64 32 49.7 11.1 32 11.1"></path><path d="M33.4 43h-3.5c-1.1 0-1.7-.5-1.7-1.4v-8c0-.5.2-.7.7-.7h4.5a5.2 5.2 0 0 1 5.2 5.1 4.94 4.94 0 0 1-5.2 5m-5.2-20.4c0-.9.6-1.4 1.7-1.4h2.3a4.31 4.31 0 0 1 4.5 4.3 4.46 4.46 0 0 1-4.5 4.4h-3.3c-.5 0-.7-.2-.7-.7zm14.1 8.9c-.7-.3-.7-.4 0-.8a5.91 5.91 0 0 0 2.8-5.2c0-3.9-5.2-7.8-13.5-7.8a22 22 0 0 0-13.3 4.4c-.7.6-.6.9-.4 1.1l1.2 1.4c.4.4.6.3.8.1.9-.7 1-.3 1 .5V39c0 .8-.1 1.2-1 .5-.2-.2-.4-.3-.8.1l-1.3 1.5c-.2.3-.4.6.4 1.1a24.7 24.7 0 0 0 13.6 4.3c9.3 0 15.1-3.9 15.1-9.1.1-3.5-2.8-5.2-4.6-5.9"></path></svg>';
+
 function OnLocationSearchGotFocus() {
   OnLocationSearch();
 }
@@ -1193,7 +1204,7 @@ function OnLocationSearch() {
     const item = document.createElement("div");
     item.innerHTML = location.properties["name"];
     if (location.properties["railway:ref"]) {
-      item.innerHTML = `${iconNMBS}<span class="station">${item.innerHTML}</span>`;
+      item.innerHTML = `${ICON_NMBS}<span class="station">${item.innerHTML}</span>`;
     }
     item.setAttribute("onclick", "OnClickLocationSearchResult(" + res + ")");
 
