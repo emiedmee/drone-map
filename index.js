@@ -644,11 +644,16 @@ function onEachGeozone(feature, layer) {
   // When geozone is clicked, replace popup content to include the height of the clicked location
   layer.on('click', e => {
     if (e.sourceTarget?.feature.properties && e.latlng) {
+      const baseContent = createGeozonePopupContent(e.sourceTarget.feature);
+      e.sourceTarget.setPopupContent(baseContent
+        + '<br>Surface height: ---'
+      );
       getHeight(e.latlng).then(height => {
-        e.sourceTarget.setPopupContent(
-          createGeozonePopupContent(e.sourceTarget.feature)
-          + `<br>Surface height: ${Math.round(height * 100) / 100} m`
-        );
+        if (height) {
+          e.sourceTarget.setPopupContent(baseContent
+            + `<br>Surface height: ${Math.round(height * 100) / 100} m`
+          );
+        }
       });
     }
   });
