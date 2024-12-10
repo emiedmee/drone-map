@@ -328,7 +328,8 @@ const styleGeozoneNonActive = {
   "fill": false,
 
   "color": "rgb(255, 0, 0)",
-  "weight": "0.75"
+  "weight": "0.75",
+  "dashArray": "4"
 };
 const styleRailway = {
   "fill": false,
@@ -1241,7 +1242,7 @@ var LOCATION_NAMES;
 getLocationNames().then(
   (value) => { console.log("Successfully got location names"); /* console.debug(value); */ LOCATION_NAMES = value; },
   (error) => { console.error("Error getting location names:", error); }
-)
+);
 
 
 /*
@@ -1426,7 +1427,7 @@ location_search_clear.addEventListener("click", OnLocationSearchClear);
  */
 function isLatLngInsideBbox(latlng, bbox) {
   return bbox.S <= latlng.lat && latlng.lat <= bbox.N
-      && bbox.W <= latlng.lng && latlng.lng <= bbox.E;
+    && bbox.W <= latlng.lng && latlng.lng <= bbox.E;
 }
 
 /**
