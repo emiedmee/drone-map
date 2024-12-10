@@ -1,21 +1,21 @@
 const ARCGIS_LIMIT = "" // empty: no limit
-const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=geojson&outFields=*&returnGeometry=true&spatialRel=esriSpatialRelIntersects&where=status%3D%27validated%27&orderByFields=Shape__Area";
+const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=geojson&outFields=*&returnGeometry=true&spatialRel=esriSpatialRelIntersects&" + encode("where", "status='validated'") + "&orderByFields=Shape__Area";
 // Shape__Area%2Cname%2Ccode%2ClowerAltitudeUnit%2CupperAltitudeUnit%2ClowerAltitudeReference%2CupperAltitudeReference%2CTimeField%2ClowerLimit%2CupperLimit%2Ccategories%2CwrittenStartTimeGeneral%2CwrittenEndTimeGeneral
-const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=json&outFields=*&returnGeometry=false&spatialRel=esriSpatialRelIntersects&where=status%3D%27validated%27%20AND%20last_version%3D%27yes%27";
+const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=json&outFields=*&returnGeometry=false&spatialRel=esriSpatialRelIntersects&" + encode("where", "status='validated' AND last_version='yes'");
 // notamId%2Cfir%2Clocation%2CactivityStart%2CvalidityEnd%2Cschedule%2ClowerLimit%2ClowerLimitUnit%2CupperLimit%2CupperLimitUnit%2ClowerLimitRef%2CupperLimitRef%2CnotamText
 
 const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datasets/lijnsecties/exports/geojson";
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
-const GEO_API_HEIGHT_VL_URL = 'https://geo.api.vlaanderen.be/DHMV/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&feature_count=50&layers=DHMVII_DTM_1m&query_layers=DHMVII_DTM_1m&crs=EPSG:31370&info_format=application/geo%2bjson';
-const GEO_API_HEIGHT_WA_URL = 'https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer/identify?f=json&tolerance=1&sr=31370&layers=top&geometryType=esriGeometryPoint&returnGeometry=false&returnFieldName=false&returnUnformattedValues=false';
+const GEO_API_HEIGHT_VL_URL = "https://geo.api.vlaanderen.be/DHMV/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&feature_count=50&layers=DHMVII_DTM_1m&query_layers=DHMVII_DTM_1m&" + encode("crs", "EPSG:31370") + "&" + encode("info_format", "application/geo+json");
+const GEO_API_HEIGHT_WA_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer/identify?f=json&tolerance=1&sr=31370&layers=top&geometryType=esriGeometryPoint&returnGeometry=false&returnFieldName=false&returnUnformattedValues=false";
 
 const GEO_API_HEIGHT_VL_BBOX = { N: 51.51, E: 5.92, S: 50.68, W: 2.54 };
 const GEO_API_HEIGHT_WA_BBOX = { N: 50.85, E: 6.50, S: 49.45, W: 2.75 };
 const GEO_API_OFFSET = 25;
-const WGS84 = '+proj=longlat +datum=WGS84 +no_defs +type=crs';
-const BD72 = '+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs';
+const WGS84 = "+proj=longlat +datum=WGS84 +no_defs +type=crs";
+const BD72 = "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs";
 
 const NOTAM_CACHE = "notam-cache";
 const NOTAM_CACHE_TIME = 1; // 1D
@@ -291,6 +291,17 @@ function WGS84toBD72(wgs84) {
   }
 }
 
+/**
+ * Function to URI encode a url parameter
+ * 
+ * @param {String} key
+ * @param {String} value
+ * @returns "key=value"
+ */
+function encode(key, value) {
+  return `${key}=${encodeURIComponent(value)}`
+}
+
 
 /*
  ***********************************
@@ -392,19 +403,19 @@ function filterGeozone(feature, layer) {
 
     // /**
     //  * For NOTAM:
-    //  * If 'location' == "EBBU"
-    //  *  - take first part of 'notamText' until the "-"
+    //  * If "location" == "EBBU"
+    //  *  - take first part of "notamText" until the "-"
     //  *  - maybe until first 6/7 characters and trim whitespaces
-    //  *  - use that to compare with 'name' LIKE '%.....%' for geozone
+    //  *  - use that to compare with "name" LIKE "%.....%" for geozone
     //  * Else:
-    //  *  - use 'location' to compare with 'code' for geozone
+    //  *  - use "location" to compare with "code" for geozone
     //  */
     // if (NOTAMS && NOTAMS.features) {
     //   NOTAMS.features.forEach(notam => {
     //     if (notam.attributes) {
     //       const n_a = notam.attributes;
     //       if (n_a.location && n_a.location == "EBBU") {
-    //         if (n_a.notamText && props.name.includes(n_a.notamText.split('-')[0].trim()))
+    //         if (n_a.notamText && props.name.includes(n_a.notamText.split("-")[0].trim()))
     //           return true; // early return because geozone is active by NOTAM
     //       } else {
     //         if (n_a.location && props.code && n_a.location == props.code)
@@ -426,45 +437,45 @@ function renderGeoZone(geozone) {
   var d = props.TimeField;
   var s = null;
   if (d)
-    s = d.split(';');
+    s = d.split(";");
 
   var startingPoint = props.writtenStartTimeGeneral;
   if (startingPoint == null || startingPoint.length == 0)
     startingPoint = "000000";
-  var sP_split = startingPoint.split(';');
+  var sP_split = startingPoint.split(";");
 
   var endingPoint = props.writtenEndTimeGeneral;
   if (endingPoint == null || endingPoint.length == 0)
     endingPoint = "235959";
-  var eP_split = endingPoint.split(';');
+  var eP_split = endingPoint.split(";");
 
-  // get the 'now' time (utc) in all its necessary form
+  // get the "now" time (utc) in all its necessary form
   var now = new Date();
 
   var hour = now.getUTCHours();
   if (hour < 10)
-    hour = 0 + '' + hour;
+    hour = 0 + "" + hour;
 
   var minute = now.getUTCMinutes();
   if (minute < 10)
-    minute = 0 + '' + minute;
+    minute = 0 + "" + minute;
 
   var second = now.getUTCSeconds();
   if (second < 10)
-    second = 0 + '' + second;
+    second = 0 + "" + second;
 
   var year = now.getUTCFullYear().toString().slice(2); // remove the 20 in the year
 
   var month = now.getUTCMonth() + 1; // months range from 0-11
   if (month < 10)
-    month = 0 + '' + month;
+    month = 0 + "" + month;
 
   var day = now.getUTCDay();
   if (day < 10)
-    day = 0 + '' + day;
+    day = 0 + "" + day;
 
-  var nowNumberFull = parseInt(hour + '' + minute + '' + second);
-  var nowNumberWithDays = parseInt(year + '' + month + '' + day + '' + hour + '' + minute); // year + '' + month + '' + day + '/' + hour + '' + minute;
+  var nowNumberFull = parseInt(hour + "" + minute + "" + second);
+  var nowNumberWithDays = parseInt(year + "" + month + "" + day + "" + hour + "" + minute); // year + "" + month + "" + day + "/" + hour + "" + minute;
 
   // Param
   var countingInterval = 0;
@@ -479,7 +490,7 @@ function renderGeoZone(geozone) {
     return "Non Active";
 
   // If geozone permanent: 
-  // either in 'large window' (Active)
+  // either in "large window" (Active)
   // Will get to it later in the day (Become Active)
   if (d && d == "permanent") {
     // check if nowTime is in one of the interval
@@ -490,26 +501,26 @@ function renderGeoZone(geozone) {
       if ((sp_temp <= nowNumberFull) && (nowNumberFull <= ep_temp))
         return "Active";
 
-      // if nowTime is bigger then the end time: 'go to next interval' 
+      // if nowTime is bigger then the end time: "go to next interval" 
       if (nowNumberFull > ep_temp)
         countingInterval = countingInterval + 1;
     }
-    // if did not reach the last end interval: 'will'
+    // if did not reach the last end interval: "will"
     if (countingInterval < eP_split.length)
       return "Become active today";
   }
 
   // if the geozone has intervals
-  // intervals needs to be in 'large windows (sP-eP)'
+  // intervals needs to be in "large windows (sP-eP)"
   // if not : non active
-  // if interval in 'window' :
+  // if interval in "window" :
   // nowTime in interval: Active
   // otherwise : will become Active
   for (var k in s) {
     // get the variables
     var st = s[k];
-    var begin = parseInt(st.split('-')[0]);
-    var end = parseInt(st.split('-')[1]);
+    var begin = parseInt(st.split("-")[0]);
+    var end = parseInt(st.split("-")[1]);
 
     var NowNumberToUseStart = nowNumberFull; // nowNumber
     if (begin > 999999) { // begin.length == 11
@@ -560,9 +571,9 @@ function parseHeight(height, unit) {
    * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
    *  they do a hard-coded conversion from meter to feet, regardless of the unit.
    *    return strings.upperLimit
-   *       + ': ' + Math.round($q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperLimit] / 0.3048)
-   *       + ' ' + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperUnit]
-   *       + ' (' + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperAltitudeReference] + ')';
+   *       + ": " + Math.round($q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperLimit] / 0.3048)
+   *       + " " + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperUnit]
+   *       + " (" + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperAltitudeReference] + ")";
    */
   // height unit is always "m"
   if (PREFERRED_UNIT == "ft") {
@@ -598,7 +609,7 @@ function parseTimeField(d) {
     str = str.substring(start, end);
     str = (str - offset) % 24;
     if (str < 10)
-      str = '0' + str;
+      str = "0" + str;
     return str;
   }
 
@@ -608,7 +619,7 @@ function parseTimeField(d) {
 
   var s = null;
   if (d)
-    s = d.split(';');
+    s = d.split(";");
 
   if (d == null || d.length == 0 || d == "Non Active")
     return "Non Active";
@@ -620,8 +631,8 @@ function parseTimeField(d) {
   var local = "";
   for (var k in s) {
     var st = s[k];
-    var begin = st.split('-')[0];
-    var end = st.split('-')[1];
+    var begin = st.split("-")[0];
+    var end = st.split("-")[1];
     utc += `; ${sub(begin, 0, 2, 0)}:${begin.substring(2, 4)}-${sub(end, 0, 2, 0)}:${end.substring(2, 4)}`;
     local += `; ${sub(begin, 0, 2, offset)}:${begin.substring(2, 4)}-${sub(end, 0, 2, offset)}:${end.substring(2, 4)}`;
   }
@@ -644,11 +655,11 @@ function createGeozonePopupContent(feature) {
 }
 function onEachGeozone(feature, layer) {
   // When geozone is clicked, replace popup content to include the height of the clicked location
-  layer.on('click', e => {
+  layer.on("click", e => {
     if (e.sourceTarget?.feature.properties && e.latlng) {
       const baseContent = createGeozonePopupContent(e.sourceTarget.feature);
       e.sourceTarget.setPopupContent(baseContent
-        + '<br>Surface height: ---'
+        + "<br>Surface height: ---"
       );
       getHeight(e.latlng).then(height => {
         if (height) {
@@ -775,34 +786,34 @@ var chimneyLayer = L.geoJSON([], {
 });
 
 // Define base tile layers
-var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   minZoom: 9,
   maxZoom: 19,
   attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
 });
-var osmHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+var osmHOT = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
   minZoom: 9,
   maxZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr" target="_blank">OpenStreetMap France</a>'
 });
-var openTopoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+var openTopoMap = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
   minZoom: 9,
   maxZoom: 16,
   attribution: 'Map data: &copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org" target="_blank">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0" target="_blank">CC-BY-SA</a>)'
 });
-var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+var cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
   minZoom: 9,
   maxZoom: 19,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution" target="_blank">CARTO</a>'
 });
 
 // Initialize the map + set active overlays
-var map = L.map('map', { layers: [osm, geozoneLayer, railwayLayer, highVoltageLineLayer, cellTowerLayer, windTurbineLayer, chimneyLayer] }).fitWorld();
+var map = L.map("map", { layers: [osm, geozoneLayer, railwayLayer, highVoltageLineLayer, cellTowerLayer, windTurbineLayer, chimneyLayer] }).fitWorld();
 
 // Request location of device and set view to location
 map.locate({ setView: true, maxZoom: 16 });
-map.on('locationfound', (e) => { console.log('Found location:', e.latlng); });
-map.on('locationerror', (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
+map.on("locationfound", (e) => { console.log("Found location:", e.latlng); });
+map.on("locationerror", (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
 
 // Add scale control
 var scaleControl = L.control.scale().addTo(map);
@@ -851,9 +862,9 @@ document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes
 });
 
 // Show surface height of the location when clicking on the map
-map.on('click', e => {
+map.on("click", e => {
   if (e.latlng) {
-    const popup = L.popup().setLatLng(e.latlng).setContent('Surface height: ---').openOn(map);
+    const popup = L.popup().setLatLng(e.latlng).setContent("Surface height: ---").openOn(map);
     getHeight(e.latlng).then(height => {
       if (height) {
         popup.setContent(`Surface height: ${Math.round(height * 100) / 100} m`);
@@ -876,7 +887,7 @@ function buildOverpassQuery(filterString) {
     + filterString
     + "out geom;";
 
-  return "data=" + encodeURIComponent(q);
+  return encode("data", q);
 }
 
 async function getNotams() {
@@ -1425,10 +1436,10 @@ function isLatLngInsideBbox(latlng, bbox) {
  * @returns Surface height in meters if available
  */
 async function getHeightVL(bbox_bd72) {
-  const url = `${GEO_API_HEIGHT_VL_URL}&bbox=${bbox_bd72.join(',')}&width=${2 * GEO_API_OFFSET}&height=${2 * GEO_API_OFFSET}&i=${GEO_API_OFFSET}&j=${GEO_API_OFFSET}`;
+  const url = `${GEO_API_HEIGHT_VL_URL}&${encode("bbox", bbox_bd72.join(","))}&width=${2 * GEO_API_OFFSET}&height=${2 * GEO_API_OFFSET}&i=${GEO_API_OFFSET}&j=${GEO_API_OFFSET}`;
   const response = await (await fetch(url)).json();
-  
-  const height = response?.features?.at(0)?.properties['Pixel Value'];
+
+  const height = response?.features?.at(0)?.properties["Pixel Value"];
   if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
     return undefined;
   } else {
@@ -1446,10 +1457,10 @@ async function getHeightVL(bbox_bd72) {
  * @returns Surface height in meters if available
  */
 async function getHeightWA(pos_bd72, bbox_bd72) {
-  const url = `${GEO_API_HEIGHT_WA_URL}&imageDisplay=${2 * GEO_API_OFFSET},${2 * GEO_API_OFFSET},96&geometry={"x":${pos_bd72.x},"y":${pos_bd72.y}}&mapExtent=${bbox_bd72.join(',')}`;
+  const url = `${GEO_API_HEIGHT_WA_URL}&${encode("imageDisplay", `${2 * GEO_API_OFFSET},${2 * GEO_API_OFFSET},96`)}&${encode("geometry", `{"x":${pos_bd72.x},"y":${pos_bd72.y}}`)}&${encode("mapExtent", bbox_bd72.join(","))}`;
   const response = await (await fetch(url)).json();
-  
-  const height = response?.results?.at(0)?.attributes['Pixel Value'];
+
+  const height = response?.results?.at(0)?.attributes["Pixel Value"];
   if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
     return undefined;
   } else {
