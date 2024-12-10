@@ -808,8 +808,17 @@ var cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution" target="_blank">CARTO</a>'
 });
 
-// Initialize the map + set active overlays
-var map = L.map("map", { layers: [osm, geozoneLayer, railwayLayer, highVoltageLineLayer, cellTowerLayer, windTurbineLayer, chimneyLayer] }).fitWorld();
+// Initialize the map + set visible layers
+var layers = [
+  osm,
+  geozoneLayer,
+  railwayLayer,
+  highVoltageLineLayer,
+  cellTowerLayer,
+  windTurbineLayer,
+  chimneyLayer,
+];
+var map = L.map("map", { layers: layers, maxBounds: [[51.5, 6], [49.5, 2]] }).fitWorld();
 
 // Request location of device and set view to location
 map.locate({ setView: true, maxZoom: 16 });
@@ -897,6 +906,9 @@ async function getNotams() {
   return response;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getGeoZones() {
   const response = await (await fetch(GEOZONE_URL)).json();
 
@@ -909,10 +921,12 @@ async function getGeoZones() {
   response.features.reverse();
   // response.features.sort((a, b) => b.properties.Shape__Area - a.properties.Shape__Area)
 
-  geozoneLayer.addData(response);
   return response;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getRailways() {
   const response = await (await fetch(RAILWAY_URL)).json();
 
@@ -935,10 +949,12 @@ async function getRailways() {
     new_response.features.push(response.features[i]);
   }
 
-  railwayLayer.addData(new_response);
   return new_response;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getHighVoltageLines() {
   // Check if it's cached in localStorage
   var cache = localStorage.getItem(HIGH_VOLTAGE_LINE_CACHE);
@@ -975,10 +991,12 @@ async function getHighVoltageLines() {
     }
   }
 
-  highVoltageLineLayer.addData(geojson);
   return geojson;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getCellTowers() {
   // Check if it's cached in localStorage
   var cache = localStorage.getItem(CELL_TOWER_CACHE);
@@ -1026,10 +1044,12 @@ async function getCellTowers() {
     }
   }
 
-  cellTowerLayer.addData(geojson);
   return geojson;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getWindTurbines() {
   // Check if it's cached in localStorage
   var cache = localStorage.getItem(WIND_TURBINE_CACHE);
@@ -1066,10 +1086,12 @@ async function getWindTurbines() {
     }
   }
 
-  windTurbineLayer.addData(geojson);
   return geojson;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getChimneys() {
   // Check if it's cached in localStorage
   var cache = localStorage.getItem(CHIMNEY_CACHE);
@@ -1106,10 +1128,12 @@ async function getChimneys() {
     }
   }
 
-  chimneyLayer.addData(geojson);
   return geojson;
 }
 
+/**
+ * @returns {Promise<FeatureCollection<GeometryObject, any>>}
+ */
 async function getLocationNames() {
   // Check if it's cached in localStorage
   var cache = localStorage.getItem(LOCATION_NAMES_CACHE);
@@ -1199,48 +1223,88 @@ async function getLocationNames() {
 // Get NOTAM warnings and No-Fly zones
 var NOTAMS;
 getNotams().then(
-  (value) => { console.log("Successfully got NOTAMS"); /* console.debug(value); */ NOTAMS = value; },
+  (value) => {
+    console.log("Successfully got NOTAMS");
+    /* console.debug(value); */
+
+    NOTAMS = value;
+  },
   (error) => { console.error("Error getting NOTAMS:", error); }
 );
 getGeoZones().then(
-  (value) => { console.log("Successfully got no-fly zones"); /* console.debug(value); */ },
+  (value) => {
+    console.log("Successfully got no-fly zones");
+    /* console.debug(value); */
+
+    geozoneLayer.addData(value);
+  },
   (error) => { console.error("Error getting no-fly zones:", error); }
 );
 
 // Create items for Railway lines
 getRailways().then(
-  (value) => { console.log("Successfully got railways"); /* console.debug(value); */ },
+  (value) => {
+    console.log("Successfully got railways");
+    /* console.debug(value); */
+
+    railwayLayer.addData(value);
+  },
   (error) => { console.error("Error getting railways:", error); }
 );
 
 // Create items for High-voltage lines
 getHighVoltageLines().then(
-  (value) => { console.log("Successfully got high-voltage lines"); /* console.debug(value); */ },
+  (value) => {
+    console.log("Successfully got high-voltage lines");
+    /* console.debug(value); */
+
+    highVoltageLineLayer.addData(value);
+  },
   (error) => { console.error("Error getting high-voltage lines:", error); }
 );
 
 // Create items for Cell towers
 getCellTowers().then(
-  (value) => { console.log("Successfully got cell towers"); /* console.debug(value); */ },
+  (value) => {
+    console.log("Successfully got cell towers");
+    /* console.debug(value); */
+
+    cellTowerLayer.addData(value);
+  },
   (error) => { console.error("Error getting cell towers:", error); }
 );
 
 // Create items for Wind turbines
 getWindTurbines().then(
-  (value) => { console.log("Successfully got wind turbines"); /* console.debug(value); */ },
+  (value) => {
+    console.log("Successfully got wind turbines");
+    /* console.debug(value); */
+
+    windTurbineLayer.addData(value);
+  },
   (error) => { console.error("Error getting wind turbines:", error); }
 );
 
 // Create items for Chimneys
 getChimneys().then(
-  (value) => { console.log("Successfully got chimneys"); /* console.debug(value); */ },
+  (value) => {
+    console.log("Successfully got chimneys");
+    /* console.debug(value); */
+
+    chimneyLayer.addData(value);
+  },
   (error) => { console.error("Error getting chimneys:", error); }
 );
 
 // Get locations
 var LOCATION_NAMES;
 getLocationNames().then(
-  (value) => { console.log("Successfully got location names"); /* console.debug(value); */ LOCATION_NAMES = value; },
+  (value) => {
+    console.log("Successfully got location names");
+    /* console.debug(value); */
+
+    LOCATION_NAMES = value;
+  },
   (error) => { console.error("Error getting location names:", error); }
 );
 
