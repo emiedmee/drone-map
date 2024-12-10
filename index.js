@@ -1460,7 +1460,7 @@ async function getHeightWA(pos_bd72, bbox_bd72) {
   const url = `${GEO_API_HEIGHT_WA_URL}&${encode("imageDisplay", `${2 * GEO_API_OFFSET},${2 * GEO_API_OFFSET},96`)}&${encode("geometry", `{"x":${pos_bd72.x},"y":${pos_bd72.y}}`)}&${encode("mapExtent", bbox_bd72.join(","))}`;
   const response = await (await fetch(url)).json();
 
-  const height = response?.results?.at(0)?.attributes["Pixel Value"];
+  const height = response?.results?.at(0)?.attributes["Stretch.Pixel Value"];
   if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
     return undefined;
   } else {
