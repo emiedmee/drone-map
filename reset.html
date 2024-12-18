@@ -11,13 +11,30 @@
   <base href=".">
   <link rel="apple-touch-icon" sizes="144x144" href="img/favicon.svg" />
   <link rel="icon" type="image/png" sizes="144x144" href="img/favicon.svg" />
+  <script src="lib/DBDatasets.js"></script>
   <script>
     localStorage.clear();
+
+    var datasetsDB = new DBDatasets();
+    datasetsDB.addJob({
+      type: EJobType.DeleteAllDatasets,
+      callback: (result) => {
+        var message;
+        if (result) {
+          message = "The datasets in IndexDB have been cleared.";
+          console.log(message);
+        } else {
+          message = "Could not clear datasets in IndexedDB!";
+          console.warn(message);
+        }
+        document.getElementsByTagName("body")[0].innerHTML = message;
+      },
+    });
   </script>
 </head>
 
 <body>
-    Your localStorage has been reset.
+  Clearing your cached data...
 </body>
 
 </html>

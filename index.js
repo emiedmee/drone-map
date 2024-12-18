@@ -20,22 +20,22 @@ const GEO_API_OFFSET = 25;
 const WGS84 = "+proj=longlat +datum=WGS84 +no_defs +type=crs";
 const BD72 = "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs";
 
-const NOTAM_CACHE = "notam-cache";
+const NOTAM_DATASET_NAME = "notams";
 const NOTAM_CACHE_TIME = 1; // 1D
-const GEOZONE_CACHE = "geozone-cache";
+const GEOZONE_DATASET_NAME = "geozones";
 const GEOZONE_CACHE_TIME = 1; // 1D
-const RAILWAY_CACHE = "railway-cache";
+const RAILWAY_DATASET_NAME = "railways";
 const RAILWAY_CACHE_TIME = 90; // 3M
-const HIGH_VOLTAGE_LINE_CACHE = "high-voltage-line-cache";
+const HIGH_VOLTAGE_LINE_DATASET_NAME = "high-voltage-lines";
 const HIGH_VOLTAGE_LINE_CACHE_TIME = 60; // 2M
-const CELL_TOWER_CACHE = "cell-tower-cache";
+const CELL_TOWER_DATASET_NAME = "cell-towers";
 const CELL_TOWER_CACHE_TIME = 30; // 1M
-const WIND_TURBINE_CACHE = "wind-turbine-cache";
+const WIND_TURBINE_DATASET_NAME = "wind-turbines";
 const WIND_TURBINE_CACHE_TIME = 90; // 3M
-const CHIMNEY_CACHE = "chimney-cache";
+const CHIMNEY_DATASET_NAME = "chimneys";
 const CHIMNEY_CACHE_TIME = 90; // 3M
-const LOCATION_NAMES_CACHE = "location-names-cache";
-const LOCATION_NAMES_CACHE_TIME = 180; // 6M
+const LOCATION_NAME_DATASET_NAME = "location-names";
+const LOCATION_NAME_CACHE_TIME = 180; // 6M
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
@@ -893,6 +893,18 @@ map.on("click", e => {
  ***********************************
  */
 
+/**
+ * @typedef {{
+ *            name: String,
+ *            validFrom: Number,
+ *            validUntil: Number,
+ *            value: Object,
+ *          }}
+ */
+var IDataset;
+
+var datasetsDB = new DBDatasets();
+
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
   const q = "[maxsize:16Mi][timeout:30];"
@@ -906,10 +918,22 @@ function buildOverpassQuery(filterString) {
 async function getNotams() {
   const response = await (await fetch(NOTAM_URL)).json();
 
+  // Cache fetched data in IndexedDB
+  if (response) {
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: NOTAM_DATASET_NAME,
+        validTimeDays: NOTAM_CACHE_TIME,
+        value: response,
+      },
+    });
+  }
+
   return response;
 }
 
-async function getGeoZones() {
+async function getGeozones() {
   const response = await (await fetch(GEOZONE_URL)).json();
 
   // Sort geozones descending by area
@@ -918,15 +942,25 @@ async function getGeoZones() {
    * Geozones are sorted ascending by area by the API when "&orderByFields=Shape__Area" is included in the URL
    *  so only need to reverse the results to get them sorted descending
    */
-  response.features.reverse();
+  if (response)
+    response.features.reverse();
   // response.features.sort((a, b) => b.properties.Shape__Area - a.properties.Shape__Area)
+
+  // Cache fetched data in IndexedDB
+  if (response) {
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: GEOZONE_DATASET_NAME,
+        validTimeDays: GEOZONE_CACHE_TIME,
+        value: response,
+      },
+    });
+  }
 
   return response;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getRailways() {
   const response = await (await fetch(RAILWAY_URL)).json();
 
@@ -949,24 +983,22 @@ async function getRailways() {
     geojson.features.push(response.features[i]);
   }
 
+  // Cache fetched data in IndexedDB
+  if (geojson) {
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: RAILWAY_DATASET_NAME,
+        validTimeDays: RAILWAY_CACHE_TIME,
+        value: geojson,
+      },
+    });
+  }
+
   return geojson;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getHighVoltageLines() {
-  // Check if it's cached in localStorage
-  var cache = localStorage.getItem(HIGH_VOLTAGE_LINE_CACHE);
-  if (cache) {
-    var cacheJson = JSON.parse(cache);
-    // Check if the cache is still valid
-    if (cacheJson && cacheJson.validUntil > Date.now()) {
-      highVoltageLineLayer.addData(cacheJson.value);
-      return cacheJson.value;
-    }
-  }
-
   // Fetch data
   const q = buildOverpassQuery('way["power"="line"](area.belgie);');
   const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
@@ -977,38 +1009,22 @@ async function getHighVoltageLines() {
     geojson.features[i].properties = {};
   }
 
-  // Cache fetched data in localStorage
+  // Cache fetched data in IndexedDB
   if (geojson) {
-    var newCache = JSON.stringify({
-      validUntil: Date.now() + (1000 * 60 * 60 * 24 * HIGH_VOLTAGE_LINE_CACHE_TIME),
-      value: geojson
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: HIGH_VOLTAGE_LINE_DATASET_NAME,
+        validTimeDays: HIGH_VOLTAGE_LINE_CACHE_TIME,
+        value: geojson,
+      },
     });
-    try {
-      localStorage.setItem(HIGH_VOLTAGE_LINE_CACHE, newCache);
-    } catch (error) {
-      // Probably QuotaExceededError
-      console.error(error);
-    }
   }
 
   return geojson;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getCellTowers() {
-  // Check if it's cached in localStorage
-  var cache = localStorage.getItem(CELL_TOWER_CACHE);
-  if (cache) {
-    var cacheJson = JSON.parse(cache);
-    // Check if the cache is still valid
-    if (cacheJson && cacheJson.validUntil > Date.now()) {
-      cellTowerLayer.addData(cacheJson.value);
-      return cacheJson.value;
-    }
-  }
-
   // Fetch data
   const q = buildOverpassQuery('( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); );');
   const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
@@ -1030,38 +1046,22 @@ async function getCellTowers() {
     geojson.features[i].properties = new_properties;
   }
 
-  // Cache fetched data in localStorage
+  // Cache fetched data in IndexedDB
   if (geojson) {
-    var newCache = JSON.stringify({
-      validUntil: Date.now() + (1000 * 60 * 60 * 24 * CELL_TOWER_CACHE_TIME),
-      value: geojson
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: CELL_TOWER_DATASET_NAME,
+        validTimeDays: CELL_TOWER_CACHE_TIME,
+        value: geojson,
+      },
     });
-    try {
-      localStorage.setItem(CELL_TOWER_CACHE, newCache);
-    } catch (error) {
-      // Probably QuotaExceededError
-      console.error(error);
-    }
   }
 
   return geojson;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getWindTurbines() {
-  // Check if it's cached in localStorage
-  var cache = localStorage.getItem(WIND_TURBINE_CACHE);
-  if (cache) {
-    var cacheJson = JSON.parse(cache);
-    // Check if the cache is still valid
-    if (cacheJson && cacheJson.validUntil > Date.now()) {
-      windTurbineLayer.addData(cacheJson.value);
-      return cacheJson.value;
-    }
-  }
-
   // Fetch data
   const q = buildOverpassQuery('node["generator:source"="wind"](area.belgie);');
   const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
@@ -1072,38 +1072,22 @@ async function getWindTurbines() {
     geojson.features[i].properties = {};
   }
 
-  // Cache fetched data in localStorage
+  // Cache fetched data in IndexedDB
   if (geojson) {
-    var newCache = JSON.stringify({
-      validUntil: Date.now() + (1000 * 60 * 60 * 24 * WIND_TURBINE_CACHE_TIME),
-      value: geojson
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: WIND_TURBINE_DATASET_NAME,
+        validTimeDays: WIND_TURBINE_CACHE_TIME,
+        value: geojson,
+      },
     });
-    try {
-      localStorage.setItem(WIND_TURBINE_CACHE, newCache);
-    } catch (error) {
-      // Probably QuotaExceededError
-      console.error(error);
-    }
   }
 
   return geojson;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getChimneys() {
-  // Check if it's cached in localStorage
-  var cache = localStorage.getItem(CHIMNEY_CACHE);
-  if (cache) {
-    var cacheJson = JSON.parse(cache);
-    // Check if the cache is still valid
-    if (cacheJson && cacheJson.validUntil > Date.now()) {
-      chimneyLayer.addData(cacheJson.value);
-      return cacheJson.value;
-    }
-  }
-
   // Fetch data
   const q = buildOverpassQuery('node["man_made"="chimney"](area.belgie);');
   const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
@@ -1114,37 +1098,22 @@ async function getChimneys() {
     geojson.features[i].properties = {};
   }
 
-  // Cache fetched data in localStorage
+  // Cache fetched data in IndexedDB
   if (geojson) {
-    var newCache = JSON.stringify({
-      validUntil: Date.now() + (1000 * 60 * 60 * 24 * CHIMNEY_CACHE_TIME),
-      value: geojson
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: CHIMNEY_DATASET_NAME,
+        validTimeDays: CHIMNEY_CACHE_TIME,
+        value: geojson,
+      },
     });
-    try {
-      localStorage.setItem(CHIMNEY_CACHE, newCache);
-    } catch (error) {
-      // Probably QuotaExceededError
-      console.error(error);
-    }
   }
 
   return geojson;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getLocationNames() {
-  // Check if it's cached in localStorage
-  var cache = localStorage.getItem(LOCATION_NAMES_CACHE);
-  if (cache) {
-    var cacheJson = JSON.parse(cache);
-    // Check if the cache is still valid
-    if (cacheJson && cacheJson.validUntil > Date.now()) {
-      return cacheJson.value;
-    }
-  }
-
   /**
    * Town names
    */
@@ -1192,121 +1161,271 @@ async function getLocationNames() {
     geojson.features.push(geojson2.features[i]);
   }
 
-  // Cache fetched data in localStorage
+  // Cache fetched data in IndexedDB
   if (geojson) {
-    var newCache = JSON.stringify({
-      validUntil: Date.now() + (1000 * 60 * 60 * 24 * LOCATION_NAMES_CACHE_TIME),
-      value: geojson
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: LOCATION_NAME_DATASET_NAME,
+        validTimeDays: LOCATION_NAME_CACHE_TIME,
+        value: geojson,
+      },
     });
-    try {
-      localStorage.setItem(LOCATION_NAMES_CACHE, newCache);
-    } catch (error) {
-      // Probably QuotaExceededError
-      console.error(error);
-
-      if (error.code == error.QUOTA_EXCEEDED_ERR) {
-        try {
-          // Try clearing localStorage and saving again
-          localStorage.clear();
-          localStorage.setItem(LOCATION_NAMES_CACHE, newCache);
-        } catch (err) {
-          // Probably QuotaExceededError
-          console.error(error);
-        }
-      }
-    }
   }
 
   return geojson;
 }
 
-// Get NOTAM warnings and No-Fly zones
+
 var NOTAMS;
-getNotams().then(
-  (value) => {
-    console.log("Successfully got NOTAMS");
-    /* console.debug(value); */
+/**
+ * Get NOTAM warnings
+ */
+function processNotams(value) {
+  console.log("Successfully got NOTAMS");
+  /* console.debug(value); */
 
-    NOTAMS = value;
-  },
-  (error) => { console.error("Error getting NOTAMS:", error); }
-);
-getGeoZones().then(
-  (value) => {
-    console.log("Successfully got no-fly zones");
-    /* console.debug(value); */
+  NOTAMS = value;
+}
 
-    geozoneLayer.addData(value);
-  },
-  (error) => { console.error("Error getting no-fly zones:", error); }
-);
+/**
+ * Create items for No-Fly zones
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processGeozones(value) {
+  console.log("Successfully got no-fly zones");
+  /* console.debug(value); */
 
-// Create items for Railway lines
-getRailways().then(
-  (value) => {
-    console.log("Successfully got railways");
-    /* console.debug(value); */
+  geozoneLayer.addData(value);
+}
 
-    railwayLayer.addData(value);
-  },
-  (error) => { console.error("Error getting railways:", error); }
-);
+/**
+ * Create items for Railway lines
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processRailways(value) {
+  console.log("Successfully got railways");
+  /* console.debug(value); */
 
-// Create items for High-voltage lines
-getHighVoltageLines().then(
-  (value) => {
-    console.log("Successfully got high-voltage lines");
-    /* console.debug(value); */
+  railwayLayer.addData(value);
+}
 
-    highVoltageLineLayer.addData(value);
-  },
-  (error) => { console.error("Error getting high-voltage lines:", error); }
-);
+/**
+ * Create items for High-voltage lines
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processHighVoltageLines(value) {
+  console.log("Successfully got high-voltage lines");
+  /* console.debug(value); */
 
-// Create items for Cell towers
-getCellTowers().then(
-  (value) => {
-    console.log("Successfully got cell towers");
-    /* console.debug(value); */
+  highVoltageLineLayer.addData(value);
+}
 
-    cellTowerLayer.addData(value);
-  },
-  (error) => { console.error("Error getting cell towers:", error); }
-);
+/**
+ * Create items for Cell towers
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processCellTowers(value) {
+  console.log("Successfully got cell towers");
+  /* console.debug(value); */
 
-// Create items for Wind turbines
-getWindTurbines().then(
-  (value) => {
-    console.log("Successfully got wind turbines");
-    /* console.debug(value); */
+  cellTowerLayer.addData(value);
+}
 
-    windTurbineLayer.addData(value);
-  },
-  (error) => { console.error("Error getting wind turbines:", error); }
-);
+/**
+ * Create items for Wind turbines
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processWindTurbines(value) {
+  console.log("Successfully got wind turbines");
+  /* console.debug(value); */
 
-// Create items for Chimneys
-getChimneys().then(
-  (value) => {
-    console.log("Successfully got chimneys");
-    /* console.debug(value); */
+  windTurbineLayer.addData(value);
+}
 
-    chimneyLayer.addData(value);
-  },
-  (error) => { console.error("Error getting chimneys:", error); }
-);
+/**
+ * Create items for Chimneys
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processChimneys(value) {
+  console.log("Successfully got chimneys");
+  /* console.debug(value); */
 
-// Get locations
+  chimneyLayer.addData(value);
+}
+
 var LOCATION_NAMES;
-getLocationNames().then(
-  (value) => {
-    console.log("Successfully got location names");
-    /* console.debug(value); */
+/**
+ * Get locations
+ * 
+ * @param {FeatureCollection<GeometryObject, any>} value
+ */
+function processLocationNames(value) {
+  console.log("Successfully got location names");
+  /* console.debug(value); */
 
-    LOCATION_NAMES = value;
+  LOCATION_NAMES = value;
+  // TODO: move search bar functionality to separate file and do the data injection into that here
+}
+
+
+// Get Notam messages from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: NOTAM_DATASET_NAME,
   },
-  (error) => { console.error("Error getting location names:", error); }
-);
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processNotams(result.value);
+    } else {
+      getNotams().then(
+        (value) => processNotams(value),
+        (error) => console.error("Error getting NOTAMS:", error),
+      );
+    }
+  },
+});
+
+// Get Geozones from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: GEOZONE_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processGeozones(result.value);
+    } else {
+      getGeozones().then(
+        (value) => processGeozones(value),
+        (error) => console.error("Error getting no-fly zones:", error),
+      );
+    }
+  },
+});
+
+// Get Railways from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: RAILWAY_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processRailways(result.value);
+    } else {
+      getRailways().then(
+        (value) => processRailways(value),
+        (error) => console.error("Error getting railways:", error),
+      );
+    }
+  },
+});
+
+// Get High-voltage lines from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: HIGH_VOLTAGE_LINE_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processHighVoltageLines(result.value);
+    } else {
+      getHighVoltageLines().then(
+        (value) => processHighVoltageLines(value),
+        (error) => console.error("Error getting high-voltage lines:", error),
+      );
+    }
+  },
+});
+
+// Get Cell towers from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: CELL_TOWER_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processCellTowers(result.value);
+    } else {
+      getCellTowers().then(
+        (value) => processCellTowers(value),
+        (error) => console.error("Error getting cell towers:", error),
+      );
+    }
+  },
+});
+
+// Get Wind turbines from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: WIND_TURBINE_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processWindTurbines(result.value);
+    } else {
+      getWindTurbines().then(
+        (value) => processWindTurbines(value),
+        (error) => console.error("Error getting wind turbines:", error),
+      );
+    }
+  },
+});
+
+// Get Chimneys from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: CHIMNEY_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processChimneys(result.value);
+    } else {
+      getChimneys().then(
+        (value) => processChimneys(value),
+        (error) => console.error("Error getting chimneys:", error),
+      );
+    }
+  },
+});
+
+// Get Location names from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: LOCATION_NAME_DATASET_NAME,
+  },
+  callback: (/** @type {IDataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processLocationNames(result.value);
+    } else {
+      getLocationNames().then(
+        (value) => processLocationNames(value),
+        (error) => console.error("Error getting location names:", error),
+      );
+    }
+  },
+});
 
 
 /*
