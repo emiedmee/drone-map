@@ -1,3 +1,6 @@
+const MIN_ZOOM = 9;
+const MAX_ZOOM = 19;
+
 const ARCGIS_LIMIT = "" // empty: no limit
 const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=geojson&outFields=*&returnGeometry=true&spatialRel=esriSpatialRelIntersects&" + encode("where", "status='validated'") + "&orderByFields=Shape__Area";
 // Shape__Area%2Cname%2Ccode%2ClowerAltitudeUnit%2CupperAltitudeUnit%2ClowerAltitudeReference%2CupperAltitudeReference%2CTimeField%2ClowerLimit%2CupperLimit%2Ccategories%2CwrittenStartTimeGeneral%2CwrittenEndTimeGeneral
@@ -311,15 +314,15 @@ function encode(key, value) {
 
 // Create styles for GeoJSON layers
 const styleGeozoneActive = {
-  "fillColor": "rgba(237, 81, 81)",
+  "fillColor": "#ed5151",
   "fillOpacity": "calc(126/255)",
 
-  "color": "rgba(153, 153, 153)",
+  "color": "#999999",
   "opacity": "calc(64/255)",
   "weight": "0.75"
 };
 const styleGeozoneBecomeActive = {
-  "fillColor": "rgb(255, 255, 0, 131)",
+  "fillColor": "#ffff00",
   "fillOpacity": "calc(131/255)",
 
   "stroke": false,
@@ -327,7 +330,7 @@ const styleGeozoneBecomeActive = {
 const styleGeozoneNonActive = {
   "fill": false,
 
-  "color": "rgb(255, 0, 0)",
+  "color": "#ff0000",
   "weight": "0.75",
   "dashArray": "4"
 };
@@ -788,23 +791,23 @@ var chimneyLayer = L.geoJSON([], {
 
 // Define base tile layers
 var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  minZoom: 9,
-  maxZoom: 19,
+  minZoom: MIN_ZOOM,
+  maxZoom: MAX_ZOOM,
   attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
 });
 var osmHOT = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
-  minZoom: 9,
-  maxZoom: 19,
+  minZoom: MIN_ZOOM,
+  maxZoom: MAX_ZOOM,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr" target="_blank">OpenStreetMap France</a>'
 });
 var openTopoMap = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-  minZoom: 9,
-  maxZoom: 16,
+  minZoom: MIN_ZOOM,
+  maxZoom: MAX_ZOOM,
   attribution: 'Map data: &copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org" target="_blank">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0" target="_blank">CC-BY-SA</a>)'
 });
 var cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
-  minZoom: 9,
-  maxZoom: 19,
+  minZoom: MIN_ZOOM,
+  maxZoom: MAX_ZOOM,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution" target="_blank">CARTO</a>'
 });
 
@@ -814,14 +817,14 @@ var layers = [
   geozoneLayer,
   railwayLayer,
   highVoltageLineLayer,
-  cellTowerLayer,
-  windTurbineLayer,
-  chimneyLayer,
 ];
-var map = L.map("map", { layers: layers, maxBounds: [[51.5, 6], [49.5, 2]] }).fitWorld();
+var map = L.map("map", {
+  layers: layers,
+  maxBounds: [[51.5, 6], [49.5, 2]],
+});
 
 // Request location of device and set view to location
-map.locate({ setView: true, maxZoom: 16 });
+map.locate({ setView: true, maxZoom: MAX_ZOOM });
 map.on("locationfound", (e) => { console.log("Found location:", e.latlng); });
 map.on("locationerror", (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
 
@@ -849,7 +852,7 @@ var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes.forEach(child => {
   switch (child.childNodes[0].childNodes[1].textContent.trim()) {
     case "No-Fly Zones":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:rgb(237, 81, 81)");
+      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ed5151");
       break;
     case "Railways":
       child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff0000");
@@ -906,9 +909,6 @@ async function getNotams() {
   return response;
 }
 
-/**
- * @returns {Promise<FeatureCollection<GeometryObject, any>>}
- */
 async function getGeoZones() {
   const response = await (await fetch(GEOZONE_URL)).json();
 
@@ -931,7 +931,7 @@ async function getRailways() {
   const response = await (await fetch(RAILWAY_URL)).json();
 
   // New object that will contain all the railway sections that are not deleted
-  var new_response = { "type": "FeatureCollection", "features": [] };
+  var geojson = { "type": "FeatureCollection", "features": [] };
 
   // Fix missing labels for railway sections
   for (let i = 0; i < response.features.length; i++) {
@@ -946,10 +946,10 @@ async function getRailways() {
       response.features[i].properties["label"] = RAILWAY_FIX[response.features[i].properties["ls_id"]]
     }
     // Include section in new object if it's not deleted
-    new_response.features.push(response.features[i]);
+    geojson.features.push(response.features[i]);
   }
 
-  return new_response;
+  return geojson;
 }
 
 /**
