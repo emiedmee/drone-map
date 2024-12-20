@@ -339,7 +339,7 @@ const styleGeozoneNonActive = {
   dashArray: "4",
 };
 const styleRailway = {
-  "fill": false,
+  fill: false,
 
   stroke: true,
   color: "#ff0000",
@@ -351,6 +351,8 @@ const styleHighVoltageLine = {
   stroke: true,
   color: "#0000ff",
   weight: "2",
+
+  renderer: L.canvas(),
 };
 const markerOptionsCellTower = {
   fill: true,
@@ -362,6 +364,8 @@ const markerOptionsCellTower = {
   opacity: 1,
   weight: 1,
   radius: 8,
+
+  renderer: L.canvas(),
 };
 const markerOptionsWindTurbine = {
   fill: true,
@@ -373,6 +377,8 @@ const markerOptionsWindTurbine = {
   opacity: 1,
   weight: 1,
   radius: 8,
+
+  renderer: L.canvas(),
 };
 const markerOptionsChimney = {
   fill: true,
@@ -779,61 +785,61 @@ function pointToLayerChimney(point, latlng) {
  */
 
 // Define overlay layers
-var geozoneLayer = L.geoJSON([], {
+const geozoneLayer = L.geoJSON([], {
   filter: filterGeozone,
   style: styleGeozone,
   onEachFeature: onEachGeozone,
 });
-var railwayLayer = L.geoJSON([], {
+const railwayLayer = L.geoJSON([], {
   style: styleRailway,
   onEachFeature: onEachRailway,
 });
-var highVoltageLineLayer = L.geoJSON([], {
+const highVoltageLineLayer = L.geoJSON([], {
   style: styleHighVoltageLine,
 });
-var cellTowerLayer = L.geoJSON([], {
+const cellTowerLayer = L.geoJSON([], {
   onEachFeature: onEachCellTower,
   pointToLayer: pointToLayerCellTower,
 });
-var windTurbineLayer = L.geoJSON([], {
+const windTurbineLayer = L.geoJSON([], {
   onEachFeature: onEachWindTurbine,
   pointToLayer: pointToLayerWindTurbine,
 });
-var chimneyLayer = L.geoJSON([], {
+const chimneyLayer = L.geoJSON([], {
   onEachFeature: onEachChimney,
   pointToLayer: pointToLayerChimney,
 });
 
 // Define base tile layers
-var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   minZoom: MIN_ZOOM,
   maxZoom: MAX_ZOOM,
   attribution: '&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
 });
-var osmHOT = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+const osmHOT = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
   minZoom: MIN_ZOOM,
   maxZoom: MAX_ZOOM,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr" target="_blank">OpenStreetMap France</a>'
 });
-var openTopoMap = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+const openTopoMap = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
   minZoom: MIN_ZOOM,
   maxZoom: MAX_ZOOM,
   attribution: 'Map data: &copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org" target="_blank">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0" target="_blank">CC-BY-SA</a>)'
 });
-var cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
+const cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png", {
   minZoom: MIN_ZOOM,
   maxZoom: MAX_ZOOM,
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attribution" target="_blank">CARTO</a>'
 });
 
 // Initialize the map + set visible layers
-var layers = [
+const layers = [
   osm,
   geozoneLayer,
   railwayLayer,
   highVoltageLineLayer,
 ];
-var map = L.map("map", {
+const map = L.map("map", {
   layers: layers,
   maxBounds: [[51.5, 6], [49.5, 2]],
 });
@@ -844,16 +850,16 @@ map.on("locationfound", (e) => { console.log("Found location:", e.latlng); });
 map.on("locationerror", (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
 
 // Add scale control
-var scaleControl = L.control.scale().addTo(map);
+const scaleControl = L.control.scale().addTo(map);
 
 // Create layer controls
-var baseMaps = {
+const baseMaps = {
   "OpenStreetMap": osm,
   "OSM Humanitarian": osmHOT,
   "OpenTopoMap": openTopoMap,
   "Carto Light": cartoLight,
 };
-var overlayMaps = {
+const overlayMaps = {
   "No-Fly Zones": geozoneLayer,
   "Railways": railwayLayer,
   "High-Voltage Lines": highVoltageLineLayer,
@@ -861,7 +867,7 @@ var overlayMaps = {
   "Wind Turbines": windTurbineLayer,
   "Chimneys": chimneyLayer,
 };
-var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
 // Give checkboxes in the overlay menu a custom color
 function styleOverlayCheckboxes() {
@@ -904,6 +910,20 @@ map.on("click", e => {
   }
 });
 
+// Add EventForwarder to forward events that would otherwise be blocked/stopped by top Canvas layer
+const eventForwarder = new L.eventForwarder({
+  map: map,
+  events: {
+    click: true,
+  },
+  throttleMs: 100,
+  throttleOptions: {
+    leading: true,
+    trailing: false,
+  },
+});
+eventForwarder.enable();
+
 
 /*
  ***********************************
@@ -921,7 +941,7 @@ map.on("click", e => {
  */
 var IDataset;
 
-var datasetsDB = new DBDatasets();
+const datasetsDB = new DBDatasets();
 
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
