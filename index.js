@@ -314,61 +314,76 @@ function encode(key, value) {
 
 // Create styles for GeoJSON layers
 const styleGeozoneActive = {
-  "fillColor": "#ed5151",
-  "fillOpacity": "calc(126/255)",
+  fill: true,
+  fillColor: "#ed5151",
+  fillOpacity: "calc(126/255)",
 
-  "color": "#999999",
-  "opacity": "calc(64/255)",
-  "weight": "0.75"
+  stroke: true,
+  color: "#999999",
+  opacity: "calc(64/255)",
+  weight: "0.75",
 };
 const styleGeozoneBecomeActive = {
-  "fillColor": "#ffff00",
-  "fillOpacity": "calc(131/255)",
+  fill: true,
+  fillColor: "#ffff00",
+  fillOpacity: "calc(131/255)",
 
-  "stroke": false,
+  stroke: false,
 };
 const styleGeozoneNonActive = {
-  "fill": false,
+  fill: false,
 
-  "color": "#ff0000",
-  "weight": "0.75",
-  "dashArray": "4"
+  stroke: true,
+  color: "#ff0000",
+  weight: "0.75",
+  dashArray: "4",
 };
 const styleRailway = {
   "fill": false,
 
-  "color": "#ff0000",
-  "weight": "3"
+  stroke: true,
+  color: "#ff0000",
+  weight: "3",
 };
 const styleHighVoltageLine = {
-  "fill": false,
+  fill: false,
 
-  "color": "#0000ff",
-  "weight": "2"
+  stroke: true,
+  color: "#0000ff",
+  weight: "2",
 };
 const markerOptionsCellTower = {
-  radius: 8,
+  fill: true,
   fillColor: "#ff7800",
+  fillOpacity: 0.8,
+
+  stroke: true,
   color: "#000000",
-  weight: 1,
   opacity: 1,
-  fillOpacity: 0.8
+  weight: 1,
+  radius: 8,
 };
 const markerOptionsWindTurbine = {
-  radius: 8,
+  fill: true,
   fillColor: "#cccccc",
+  fillOpacity: 0.8,
+
+  stroke: true,
   color: "#000000",
-  weight: 1,
   opacity: 1,
-  fillOpacity: 0.8
+  weight: 1,
+  radius: 8,
 };
 const markerOptionsChimney = {
-  radius: 8,
+  fill: true,
   fillColor: "#555555",
+  fillOpacity: 0.8,
+
+  stroke: true,
   color: "#000000",
-  weight: 1,
   opacity: 1,
-  fillOpacity: 0.8
+  weight: 1,
+  radius: 8,
 };
 
 // var someLayer = L.GeoJSON(geoJsonFeatureData, {
@@ -379,8 +394,8 @@ const markerOptionsChimney = {
 // });
 
 // Functions to render Geozone features
-/* filterGeozone(feature, layer) */
-function filterGeozone(feature, layer) {
+/* filterGeozone(feature) */
+function filterGeozone(feature) {
   var show = false;
 
   if (feature.properties) {
@@ -680,10 +695,10 @@ function onEachGeozone(feature, layer) {
     layer.bindPopup(createGeozonePopupContent(feature));
   }
 }
-/* pointToLayerGeozone(feature, latlng) */
+/* pointToLayerGeozone(point, latlng) */
 
 // Functions to render Railway features
-/* filterRailway(feature, layer) */
+/* filterRailway(feature) */
 /* styleRailway(feature) */
 /* onEachRailway(feature, layer) */
 function onEachRailway(feature, layer) {
@@ -692,16 +707,16 @@ function onEachRailway(feature, layer) {
     layer.bindPopup(`Line: ${props.label}`);
   }
 }
-/* pointToLayerRailway(feature, latlng) */
+/* pointToLayerRailway(point, latlng) */
 
 // Functions to render HighVoltageLine features
-/* filterHighVoltageLine(feature, layer) */
+/* filterHighVoltageLine(feature) */
 /* styleHighVoltageLine(feature) */
 /* onEachHighVoltageLine(feature, layer) */
-/* pointToLayerHighVoltageLine(feature, latlng) */
+/* pointToLayerHighVoltageLine(point, latlng) */
 
 // Functions to render CellTower features
-/* filterCellTower(feature, layer) */
+/* filterCellTower(feature) */
 /* styleCellTower(feature) */
 /* onEachCellTower(feature, layer) */
 function onEachCellTower(feature, layer) {
@@ -723,13 +738,13 @@ function onEachCellTower(feature, layer) {
 
   layer.bindPopup(text);
 }
-/* pointToLayerCellTower(feature, latlng) */
-function pointToLayerCellTower(feature, latlng) {
+/* pointToLayerCellTower(point, latlng) */
+function pointToLayerCellTower(point, latlng) {
   return L.circleMarker(latlng, markerOptionsCellTower);
 }
 
 // Functions to render WindTurbine features
-/* filterWindTurbine(feature, layer) */
+/* filterWindTurbine(feature) */
 /* styleWindTurbine(feature) */
 /* onEachWindTurbine(feature, layer) */
 function onEachWindTurbine(feature, layer) {
@@ -737,13 +752,13 @@ function onEachWindTurbine(feature, layer) {
 
   layer.bindPopup(text);
 }
-/* pointToLayerWindTurbine(feature, latlng) */
-function pointToLayerWindTurbine(feature, latlng) {
+/* pointToLayerWindTurbine(point, latlng) */
+function pointToLayerWindTurbine(point, latlng) {
   return L.circleMarker(latlng, markerOptionsWindTurbine);
 }
 
 // Functions to render Chimney features
-/* filterChimney(feature, layer) */
+/* filterChimney(feature) */
 /* styleChimney(feature) */
 /* onEachChimney(feature, layer) */
 function onEachChimney(feature, layer) {
@@ -751,8 +766,8 @@ function onEachChimney(feature, layer) {
 
   layer.bindPopup(text);
 }
-/* pointToLayerWindTurbine(feature, latlng) */
-function pointToLayerChimney(feature, latlng) {
+/* pointToLayerWindTurbine(point, latlng) */
+function pointToLayerChimney(point, latlng) {
   return L.circleMarker(latlng, markerOptionsChimney);
 }
 
@@ -849,30 +864,33 @@ var overlayMaps = {
 var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
 // Give checkboxes in the overlay menu a custom color
-document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes.forEach(child => {
-  switch (child.childNodes[0].childNodes[1].textContent.trim()) {
-    case "No-Fly Zones":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ed5151");
-      break;
-    case "Railways":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff0000");
-      break;
-    case "High-Voltage Lines":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#0000ff");
-      break;
-    case "Cell Towers":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff7800");
-      break;
-    case "Wind Turbines":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#cccccc");
-      break;
-    case "Chimneys":
-      child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#555555");
-      break;
-    default:
-      break;
-  }
-});
+function styleOverlayCheckboxes() {
+  document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes.forEach(child => {
+    switch (child.childNodes[0].childNodes[1].textContent.trim()) {
+      case "No-Fly Zones":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ed5151");
+        break;
+      case "Railways":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff0000");
+        break;
+      case "High-Voltage Lines":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#0000ff");
+        break;
+      case "Cell Towers":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff7800");
+        break;
+      case "Wind Turbines":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#cccccc");
+        break;
+      case "Chimneys":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#555555");
+        break;
+      default:
+        break;
+    }
+  });
+}
+styleOverlayCheckboxes();
 
 // Show surface height of the location when clicking on the map
 map.on("click", e => {
@@ -942,9 +960,10 @@ async function getGeozones() {
    * Geozones are sorted ascending by area by the API when "&orderByFields=Shape__Area" is included in the URL
    *  so only need to reverse the results to get them sorted descending
    */
-  if (response)
+  if (response) {
     response.features.reverse();
-  // response.features.sort((a, b) => b.properties.Shape__Area - a.properties.Shape__Area)
+    // response.features.sort((a, b) => b.properties.Shape__Area - a.properties.Shape__Area)
+  }
 
   // Cache fetched data in IndexedDB
   if (response) {
