@@ -390,6 +390,8 @@ const markerOptionsChimney = {
   opacity: 1,
   weight: 1,
   radius: 8,
+
+  renderer: L.canvas(),
 };
 
 // var someLayer = L.GeoJSON(geoJsonFeatureData, {
@@ -933,11 +935,11 @@ eventForwarder.enable();
 
 /**
  * @typedef {{
- *            name: String,
- *            validFrom: Number,
- *            validUntil: Number,
- *            value: Object,
- *          }}
+ *  name: String,
+ *  validFrom: Number,
+ *  validUntil: Number,
+ *  value: Object,
+ * }}
  */
 var IDataset;
 
@@ -1299,7 +1301,6 @@ function processChimneys(value) {
   chimneyLayer.addData(value);
 }
 
-var LOCATION_NAMES;
 /**
  * Get locations
  * 
@@ -1309,8 +1310,12 @@ function processLocationNames(value) {
   console.log("Successfully got location names");
   /* console.debug(value); */
 
-  LOCATION_NAMES = value;
-  // TODO: move search bar functionality to separate file and do the data injection into that here
+  const locationSearchBar = new LocationSearchBar(map, {
+    location_search_bar_name: "location-search-bar",
+    location_search_clear_name: "location-search-clear",
+    location_search_results_name: "location-search-results",
+  });
+  locationSearchBar.setLocationNames(value);
 }
 
 
@@ -1465,168 +1470,6 @@ datasetsDB.addJob({
     }
   },
 });
-
-
-/*
- ***********************************
- *           SEARCH BAR            *
- ***********************************
- */
-
-const ICON_NMBS = '<svg xmlns="http://www.w3.org/2000/svg" class="icon-nmbs" viewBox="0 0 64 64"><path d="M32 50.7C17.4 50.7 5.5 42.3 5.5 32S17.4 13.3 32 13.3 58.5 21.7 58.5 32 46.6 50.7 32 50.7m0-39.6C14.3 11.1 0 20.4 0 32s14.3 20.9 32 20.9S64 43.5 64 32 49.7 11.1 32 11.1"></path><path d="M33.4 43h-3.5c-1.1 0-1.7-.5-1.7-1.4v-8c0-.5.2-.7.7-.7h4.5a5.2 5.2 0 0 1 5.2 5.1 4.94 4.94 0 0 1-5.2 5m-5.2-20.4c0-.9.6-1.4 1.7-1.4h2.3a4.31 4.31 0 0 1 4.5 4.3 4.46 4.46 0 0 1-4.5 4.4h-3.3c-.5 0-.7-.2-.7-.7zm14.1 8.9c-.7-.3-.7-.4 0-.8a5.91 5.91 0 0 0 2.8-5.2c0-3.9-5.2-7.8-13.5-7.8a22 22 0 0 0-13.3 4.4c-.7.6-.6.9-.4 1.1l1.2 1.4c.4.4.6.3.8.1.9-.7 1-.3 1 .5V39c0 .8-.1 1.2-1 .5-.2-.2-.4-.3-.8.1l-1.3 1.5c-.2.3-.4.6.4 1.1a24.7 24.7 0 0 0 13.6 4.3c9.3 0 15.1-3.9 15.1-9.1.1-3.5-2.8-5.2-4.6-5.9"></path></svg>';
-
-function OnLocationSearchGotFocus() {
-  OnLocationSearch();
-}
-
-function OnLocationSearchLostFocus() {
-  // Delay the hiding of search results, because when the search results
-  //  are clicked, there is some delay as well and the click would be skipped.
-  setTimeout(() => {
-    location_search_results.classList.add("hidden");
-    location_search_results.innerHTML = "";
-  }, 150);
-}
-
-function OnLocationSearchClear() {
-  location_search_bar.value = "";
-  if (location_marker) {
-    location_marker.removeFrom(map);
-    location_marker = null;
-  }
-  OnLocationSearch();
-}
-
-function OnLocationSearch() {
-  if (location_search_bar.value.length < 2) {
-    location_search_results.classList.add("hidden");
-    return;
-  }
-
-  // Clear left-over results and show results container
-  location_search_results.classList.add("hidden");
-  location_search_results.innerHTML = "";
-
-  // Do the actual search
-  var results = [];
-  for (var i = 0; i < LOCATION_NAMES.features.length; i++) {
-    const props = LOCATION_NAMES.features[i].properties;
-
-    // If searchText is included in "name" or "name:nl" or "name:fr" or "postal_code" or "railway:ref", it's a match
-    if ((props["name"] && Normalize(props["name"]).includes(Normalize(location_search_bar.value))) ||
-      (props["name:nl"] && Normalize(props["name:nl"]).includes(Normalize(location_search_bar.value))) ||
-      (props["name:fr"] && Normalize(props["name:fr"]).includes(Normalize(location_search_bar.value))) ||
-      (props["postal_code"] && Normalize(props["postal_code"]).includes(Normalize(location_search_bar.value))) ||
-      (props["railway:ref"] && Normalize(props["railway:ref"]).includes(Normalize(location_search_bar.value)))
-    ) {
-      results.push(i);
-    }
-  }
-
-  // Display the results
-  results.forEach(res => {
-    if (res < 0 || res >= LOCATION_NAMES.features.length) return;
-
-    const location = LOCATION_NAMES.features[res];
-
-    const item = document.createElement("div");
-    item.innerHTML = location.properties["name"];
-    if (location.properties["railway:ref"]) {
-      item.innerHTML = `${ICON_NMBS}<span class="station">${item.innerHTML}</span>`;
-    }
-    item.setAttribute("onclick", "OnClickLocationSearchResult(" + res + ")");
-
-    location_search_results.appendChild(item);
-  });
-
-  location_search_results.classList.remove("hidden");
-}
-
-function OnClickLocationSearchResult(index) {
-  // Clear left-over results and hide results container
-  location_search_results.classList.add("hidden");
-  location_search_results.innerHTML = "";
-
-  // Place the text of the clicked result in the search bar
-  const location = LOCATION_NAMES.features[index];
-  location_search_bar.value = location.properties["name"];
-
-  // Add marker to the map
-  if (location_marker) {
-    location_marker.removeFrom(map);
-    location_marker = null;
-  }
-  if (location.geometry.type == "Point") {
-    // GeoJson coordinates are [lon, lat] and Leaflet wants [lat, lon].
-    // Array.reverse() will change the data itselve, so this can't be used.
-    location_marker = L.marker([location.geometry.coordinates[1], location.geometry.coordinates[0]]).addTo(map);
-    map.flyTo([location.geometry.coordinates[1], location.geometry.coordinates[0]], 13);
-  }
-}
-
-function Normalize(text) {
-  var normalized = "";
-  text = ("" + text).trim().toLowerCase();
-
-  for (var i = 0; i < text.length; i++) {
-    switch (text[i]) {
-      case "á":
-      case "à":
-      case "â":
-      case "ä":
-      case "ã":
-        normalized += "a";
-        break;
-      case "é":
-      case "è":
-      case "ê":
-      case "ë":
-        normalized += "e";
-        break;
-      case "í":
-      case "ì":
-      case "î":
-      case "ï":
-        normalized += "i";
-        break;
-      case "ó":
-      case "ò":
-      case "ô":
-      case "ö":
-      case "õ":
-        normalized += "o";
-        break;
-      case "ú":
-      case "ù":
-      case "û":
-      case "ü":
-        normalized += "u";
-        break;
-      case " ":
-      case "-":
-      case "'":
-      case "/":
-        // remove spaces, dashes, ...
-        break;
-      default:
-        normalized += text[i];
-        break;
-    }
-  }
-
-  return normalized;
-}
-
-var location_marker; // Marker for the location search result
-var location_search = document.getElementById("location-search");
-var location_search_bar = document.getElementById("location-search-bar");
-var location_search_clear = document.getElementById("location-search-clear");
-var location_search_results = document.getElementById("location-search-results");
-
-location_search_bar.addEventListener("input", OnLocationSearch);
-location_search_bar.addEventListener("focus", OnLocationSearchGotFocus);
-location_search_bar.addEventListener("blur", OnLocationSearchLostFocus);
-location_search_clear.addEventListener("click", OnLocationSearchClear);
 
 
 /*
