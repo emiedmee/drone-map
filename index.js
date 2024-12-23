@@ -312,6 +312,11 @@ function encode(key, value) {
  ***********************************
  */
 
+/**
+ * Properties that are numbers MUST be entered as numbers, without quotes!
+ *  weight, opacity, fillOpacity
+ */
+
 // Create styles for GeoJSON layers
 const styleGeozoneActive = {
   fill: true,
@@ -321,7 +326,7 @@ const styleGeozoneActive = {
   stroke: true,
   color: "#999999",
   opacity: "calc(64/255)",
-  weight: "0.75",
+  weight: 0.75,
 };
 const styleGeozoneBecomeActive = {
   fill: true,
@@ -335,7 +340,7 @@ const styleGeozoneNonActive = {
 
   stroke: true,
   color: "#ff0000",
-  weight: "0.75",
+  weight: 0.75,
   dashArray: "4",
 };
 const styleRailway = {
@@ -343,14 +348,14 @@ const styleRailway = {
 
   stroke: true,
   color: "#ff0000",
-  weight: "3",
+  weight: 3,
 };
 const styleHighVoltageLine = {
   fill: false,
 
   stroke: true,
   color: "#0000ff",
-  weight: "2",
+  weight: 2,
 
   renderer: L.canvas(),
 };
