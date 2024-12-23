@@ -313,24 +313,20 @@ function encode(key, value) {
  */
 
 /**
- * Properties that are numbers MUST be entered as numbers, without quotes!
- *  weight, opacity, fillOpacity
+ * Properties that are numbers (weight, opacity, fillOpacity) MUST be entered as numbers, without quotes!
  */
 
 // Create styles for GeoJSON layers
 const styleGeozoneActive = {
   fill: true,
-  fillColor: "#ed5151",
+  fillColor: "#ed5151", // #ed5151
   fillOpacity: "calc(126/255)",
 
-  stroke: true,
-  color: "#999999",
-  opacity: "calc(64/255)",
-  weight: 0.75,
+  stroke: false,
 };
 const styleGeozoneBecomeActive = {
   fill: true,
-  fillColor: "#ffff00",
+  fillColor: "#ffff00", // #ffff00
   fillOpacity: "calc(131/255)",
 
   stroke: false,
@@ -339,7 +335,7 @@ const styleGeozoneNonActive = {
   fill: false,
 
   stroke: true,
-  color: "#ff0000",
+  color: "#ff0000", // #ff0000
   weight: 0.75,
   dashArray: "4",
 };
@@ -347,51 +343,51 @@ const styleRailway = {
   fill: false,
 
   stroke: true,
-  color: "#ff0000",
+  color: "#ff0000", // #ff0000
   weight: 3,
 };
 const styleHighVoltageLine = {
   fill: false,
 
   stroke: true,
-  color: "#0000ff",
+  color: "#0000cc", // #0000cc
   weight: 2,
 
   renderer: L.canvas(),
 };
-const markerOptionsCellTower = {
+const styleCellTower = {
   fill: true,
-  fillColor: "#ff7800",
+  fillColor: "#ff7800", // #ff7800
   fillOpacity: 0.8,
 
   stroke: true,
-  color: "#000000",
+  color: "#000000", // #000000
   opacity: 1,
   weight: 1,
   radius: 8,
 
   renderer: L.canvas(),
 };
-const markerOptionsWindTurbine = {
+const styleWindTurbine = {
   fill: true,
-  fillColor: "#cccccc",
+  fillColor: "#cccccc", // #cccccc
   fillOpacity: 0.8,
 
   stroke: true,
-  color: "#000000",
+  color: "#000000", // #000000
   opacity: 1,
   weight: 1,
   radius: 8,
 
   renderer: L.canvas(),
 };
-const markerOptionsChimney = {
+const styleChimney = {
   fill: true,
-  fillColor: "#555555",
+  fillColor: "#555555", // #555555
   fillOpacity: 0.8,
 
   stroke: true,
-  color: "#000000",
+  color: "#000000", // 000000
   opacity: 1,
   weight: 1,
   radius: 8,
@@ -686,8 +682,13 @@ function createGeozonePopupContent(feature) {
   }
 }
 function onEachGeozone(feature, layer) {
+  // Highlight geozone when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, false));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(geozoneLayer, e.target));
+
   // When geozone is clicked, replace popup content to include the height of the clicked location
-  layer.on("click", e => {
+  layer.on("click", (e) => {
     if (e.sourceTarget?.feature.properties && e.latlng) {
       const baseContent = createGeozonePopupContent(e.sourceTarget.feature);
       e.sourceTarget.setPopupContent(baseContent
@@ -715,6 +716,11 @@ function onEachGeozone(feature, layer) {
 /* styleRailway(feature) */
 /* onEachRailway(feature, layer) */
 function onEachRailway(feature, layer) {
+  // Highlight railway when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, true));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(railwayLayer, e.target));
+
   if (feature.properties) {
     const props = feature.properties;
     layer.bindPopup(`Line: ${props.label}`);
@@ -733,6 +739,11 @@ function onEachRailway(feature, layer) {
 /* styleCellTower(feature) */
 /* onEachCellTower(feature, layer) */
 function onEachCellTower(feature, layer) {
+  // Highlight marker when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, true));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(cellTowerLayer, e.target, styleCellTower));
+
   var text = "<b>Cell Tower</b>";
 
   if (feature.properties) {
@@ -753,7 +764,7 @@ function onEachCellTower(feature, layer) {
 }
 /* pointToLayerCellTower(point, latlng) */
 function pointToLayerCellTower(point, latlng) {
-  return L.circleMarker(latlng, markerOptionsCellTower);
+  return L.circleMarker(latlng, styleCellTower);
 }
 
 // Functions to render WindTurbine features
@@ -761,13 +772,18 @@ function pointToLayerCellTower(point, latlng) {
 /* styleWindTurbine(feature) */
 /* onEachWindTurbine(feature, layer) */
 function onEachWindTurbine(feature, layer) {
+  // Highlight marker when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, true));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(windTurbineLayer, e.target, styleWindTurbine));
+
   var text = "<b>Wind Turbine</b>";
 
   layer.bindPopup(text);
 }
 /* pointToLayerWindTurbine(point, latlng) */
 function pointToLayerWindTurbine(point, latlng) {
-  return L.circleMarker(latlng, markerOptionsWindTurbine);
+  return L.circleMarker(latlng, styleWindTurbine);
 }
 
 // Functions to render Chimney features
@@ -775,15 +791,56 @@ function pointToLayerWindTurbine(point, latlng) {
 /* styleChimney(feature) */
 /* onEachChimney(feature, layer) */
 function onEachChimney(feature, layer) {
+  // Highlight marker when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, true));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(chimneyLayer, e.target, styleChimney));
+
   var text = "<b>Chimney</b>";
 
   layer.bindPopup(text);
 }
 /* pointToLayerWindTurbine(point, latlng) */
 function pointToLayerChimney(point, latlng) {
-  return L.circleMarker(latlng, markerOptionsChimney);
+  return L.circleMarker(latlng, styleChimney);
 }
 
+
+/**
+ * Highlight the given layer. Option to do layer.bringToFront().
+ * This would break the ordering of small polygons on top of large polygons, so give the option to do this.
+ * 
+ * @param {L.GeoJSON} layer The layer to highlight
+ * @param {Boolean} bringToFront Wether to bring the layer to the front
+ */
+function highlightFeature(layer, bringToFront) {
+  layer.setStyle({
+    stroke: true,
+    color: "#6699ff", // #6699ff
+    opacity: 1,
+    weight: 4,
+  });
+
+  if (bringToFront) {
+    layer.bringToFront();
+  }
+}
+
+/**
+ * Stop highlighting a layer that is part of a GeoJSON layer.
+ * With Canvas renderer, resetStyle() does not work, so when resetStyle option is given, apply that style instead to stop the highlighting.
+ * 
+ * @param {L.GeoJSON} geojson The GeoJSON layer that contains the layer to stop highlighting
+ * @param {L.GeoJSON} layer The layer to stop highlighting
+ * @param {L.PathOptions | L.StyleFunction<any>} resetStyle Optional, reset style (original style) to use
+ */
+function resetHighlight(geojson, layer, resetStyle) {
+  geojson.resetStyle(layer);
+
+  if (resetStyle) {
+    layer.setStyle(resetStyle);
+  }
+}
 
 /*
  ***********************************
@@ -881,29 +938,28 @@ function styleOverlayCheckboxes() {
   document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes.forEach(child => {
     switch (child.childNodes[0].childNodes[1].textContent.trim()) {
       case "No-Fly Zones":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ed5151");
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ed5151"); // #ed5151
         break;
       case "Railways":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff0000");
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff0000"); // #ff0000
         break;
       case "High-Voltage Lines":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#0000ff");
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#0000ff"); // #0000ff
         break;
       case "Cell Towers":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff7800");
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff7800"); // #ff7800
         break;
       case "Wind Turbines":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#cccccc");
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#cccccc"); // #cccccc
         break;
       case "Chimneys":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#555555");
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#555555"); // #555555
         break;
       default:
         break;
     }
   });
 }
-styleOverlayCheckboxes();
 
 // Show surface height of the location when clicking on the map
 map.on("click", e => {
@@ -1244,6 +1300,7 @@ function processGeozones(value) {
   /* console.debug(value); */
 
   geozoneLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 /**
@@ -1256,6 +1313,7 @@ function processRailways(value) {
   /* console.debug(value); */
 
   railwayLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 /**
@@ -1268,6 +1326,7 @@ function processHighVoltageLines(value) {
   /* console.debug(value); */
 
   highVoltageLineLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 /**
@@ -1280,6 +1339,7 @@ function processCellTowers(value) {
   /* console.debug(value); */
 
   cellTowerLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 /**
@@ -1292,6 +1352,7 @@ function processWindTurbines(value) {
   /* console.debug(value); */
 
   windTurbineLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 /**
@@ -1304,6 +1365,7 @@ function processChimneys(value) {
   /* console.debug(value); */
 
   chimneyLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 /**
