@@ -257,7 +257,7 @@ function ft2fl(ft) {
 }
 
 /**
- * Convert `BD72`/`EPSG:31370` coordinates to `WGS84`/`EPSG:4326` using GeoAPI from Vlaanderen.be
+ * Convert `BD72`/`EPSG:31370` coordinates to `WGS84`/`EPSG:4326` using GeoAPI from Vlaanderen.be.
  * 
  * @param {Object} bd72 
  * @param {Number} bd72.x Easting or x
@@ -276,7 +276,7 @@ function BD72toWGS84(bd72) {
 }
 
 /**
- * Convert `WGS84`/`EPSG:4326` coordinates to `BD72`/`EPSG:31370` using GeoAPI from Vlaanderen.be
+ * Convert `WGS84`/`EPSG:4326` coordinates to `BD72`/`EPSG:31370` using GeoAPI from Vlaanderen.be.
  * 
  * @param {Object} wgs84 
  * @param {Number} wgs84.lat Latitude
@@ -295,7 +295,7 @@ function WGS84toBD72(wgs84) {
 }
 
 /**
- * Function to URI encode a url parameter
+ * Function to URI encode a url parameter.
  * 
  * @param {String} key
  * @param {String} value
@@ -1281,7 +1281,7 @@ async function getLocationNames() {
 
 var NOTAMS;
 /**
- * Get NOTAM warnings
+ * Get NOTAM warnings.
  */
 function processNotams(value) {
   console.log("Successfully got NOTAMS");
@@ -1291,7 +1291,7 @@ function processNotams(value) {
 }
 
 /**
- * Create items for No-Fly zones
+ * Create items for No-Fly zones.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1304,7 +1304,7 @@ function processGeozones(value) {
 }
 
 /**
- * Create items for Railway lines
+ * Create items for Railway lines.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1317,7 +1317,7 @@ function processRailways(value) {
 }
 
 /**
- * Create items for High-voltage lines
+ * Create items for High-voltage lines.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1330,7 +1330,7 @@ function processHighVoltageLines(value) {
 }
 
 /**
- * Create items for Cell towers
+ * Create items for Cell towers.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1343,7 +1343,7 @@ function processCellTowers(value) {
 }
 
 /**
- * Create items for Wind turbines
+ * Create items for Wind turbines.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1356,7 +1356,7 @@ function processWindTurbines(value) {
 }
 
 /**
- * Create items for Chimneys
+ * Create items for Chimneys.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1369,7 +1369,7 @@ function processChimneys(value) {
 }
 
 /**
- * Get locations
+ * Get locations.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
@@ -1546,7 +1546,7 @@ datasetsDB.addJob({
  */
 
 /**
- * Check if a position is inside a bounding box
+ * Check if a position is inside a bounding box.
  * 
  * @param {Object} latlng Position
  * @param {Number} latlng.lat Latitude
@@ -1563,7 +1563,7 @@ function isLatLngInsideBbox(latlng, bbox) {
 }
 
 /**
- * Try to get the surface height of a position using geo services from Flanders
+ * Try to get the surface height of a position using geo services from Flanders.
  * 
  * @param {Array<Number>} bbox_bd72 BD72 coordinates of the bbox in BD72 coordinates in order: xmin, ymin, xmax, ymax
  * @returns Surface height in meters if available
@@ -1581,7 +1581,7 @@ async function getHeightVL(bbox_bd72) {
 }
 
 /**
- * Try to get the surface height of a position using geo services from Wallonia
+ * Try to get the surface height of a position using geo services from Wallonia.
  * 
  * @param {Object} pos_bd72 BD72 coordinates of the clicked position
  * @param {Number} pos_bd72.x Easting or x
@@ -1602,7 +1602,7 @@ async function getHeightWA(pos_bd72, bbox_bd72) {
 }
 
 /**
- * Get the surface height at a given position
+ * Get the surface height at a given position.
  * 
  * @param {Object} mapLatLng Position in WGS84 coordinates
  * @param {Number} mapLatLng.lat Latitude
