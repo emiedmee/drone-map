@@ -1060,11 +1060,9 @@ var IDataset;
 
 const datasetsDB = new DBDatasets();
 
-// if contains "demolished:", do not include it
-
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
-  const q = "[maxsize:32Mi][timeout:30];"
+  const q = "[maxsize:32Mi][timeout:45];"
     + 'area["name"="België / Belgique / Belgien"]->.belgie;'
     + filterString
     + "out geom;";
@@ -1345,7 +1343,19 @@ async function getObstacles() {
     if (gfid.startsWith("way/")) {
       const layer = L.polygon(rawGeojson.features[i].geometry.coordinates, { stroke: false, fill: false });
       layer.addTo(map); // Need to add layer to map before you can do getCenter()
-      rawGeojson.features[i].geometry.coordinates = layer.getCenter();
+
+      // For some reason the lat and lng are flipped in the result of getCenter()
+      //layer.getCenter(): {…}
+      // lat: 5.55553883226026 <-- this number is the longitude (small number)
+      // lng: 50.588370180042084 <-- this number is the latitude (big number)
+      const center = layer.getCenter();
+      // [ lat (=> longitude (small number)), lng (=> latitude (big number)) ]
+      const coordinates = [center.lat, center.lng];
+
+      rawGeojson.features[i].geometry = {
+        type: "Point",
+        coordinates: coordinates,
+      };
       layer.removeFrom(map);
     }
 
