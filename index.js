@@ -1036,7 +1036,6 @@ var IDataset;
 const datasetsDB = new DBDatasets();
 
 // if contains "demolished:", do not include it
-// for each feature, check if contains "height", to show in popup
 
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
@@ -1226,7 +1225,7 @@ async function getObstacles() {
   // nw["building"="office"]["building:levels"]["building:levels"!="1"]["building:levels"!="2"]["building:levels"!="3"]["building:levels"!="4"]["building:levels"!="5"]["building:levels"!="6"]["building:levels"!="7"]["building:levels"!="8"]["building:levels"!="9"](area.belgie);
   // nw["building"="apartments"]["building:levels"]["building:levels"!="1"]["building:levels"!="2"]["building:levels"!="3"]["building:levels"!="4"]["building:levels"!="5"]["building:levels"!="6"]["building:levels"!="7"]["building:levels"!="8"]["building:levels"!="9"](area.belgie);
 
-  // New object that will contain all the data of the individual queries
+  const rawGeojson = { type: "FeatureCollection", features: [] };
   const geojson = { type: "FeatureCollection", features: [] };
 
   /**
@@ -1239,7 +1238,7 @@ async function getObstacles() {
 
   // Combine individual results
   if (geojson1 && geojson1.features) {
-    geojson.features = geojson.features.concat(geojson1.features);
+    rawGeojson.features = rawGeojson.features.concat(geojson1.features);
   }
 
   /**
@@ -1268,7 +1267,7 @@ async function getObstacles() {
 
   // Combine individual results
   if (geojson2 && geojson2.features) {
-    geojson.features = geojson.features.concat(geojson2.features);
+    rawGeojson.features = rawGeojson.features.concat(geojson2.features);
   }
 
   /**
@@ -1281,22 +1280,43 @@ async function getObstacles() {
 
   // Combine individual results
   if (geojson3 && geojson3.features) {
-    geojson.features = geojson.features.concat(geojson3.features);
+    rawGeojson.features = rawGeojson.features.concat(geojson3.features);
   }
+
+  var addedIds = {};
 
   // We can combine all data before stripping, because we will do the same for all data
   // Strip non-essential data
-  for (let i = 0; i < geojson.features.length; i++) {
-    const gfp = geojson.features[i].properties;
-    var new_properties = {};
+  for (let i = 0; i < rawGeojson.features.length; i++) {
+    const gfid = rawGeojson.features[i].id;
+    const gfp = rawGeojson.features[i].properties;
 
+    // Check for duplicates
+    if (addedIds[gfid]) {
+      continue;
+    } else {
+      addedIds[gfid] = 1;
+    }
+
+    var new_properties = {};
     if (gfp["man_made"]) new_properties["man_made"] = gfp["man_made"];
     if (gfp["building"]) new_properties["building"] = gfp["building"];
     if (gfp["tower:type"]) new_properties["tower:type"] = gfp["tower:type"];
     if (gfp["communication:radio"]) new_properties["communication:radio"] = gfp["communication:radio"];
     if (gfp["communication:television"]) new_properties["communication:television"] = gfp["communication:television"];
+    if (gfp["height"]) new_properties["height"] = gfp["height"];
 
-    geojson.features[i].properties = new_properties;
+    rawGeojson.features[i].properties = new_properties;
+
+    // Transform "way" features to a point
+    if (gfid.startsWith("way/")) {
+      const layer = L.polygon(rawGeojson.features[i].geometry.coordinates, { stroke: false, fill: false });
+      layer.addTo(map); // Need to add layer to map before you can do getCenter()
+      rawGeojson.features[i].geometry.coordinates = layer.getCenter();
+      layer.removeFrom(map);
+    }
+
+    geojson.features.push(rawGeojson.features[i]);
   }
 
   // Cache fetched data in IndexedDB
