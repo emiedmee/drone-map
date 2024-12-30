@@ -32,8 +32,8 @@ const CELL_TOWER_DATASET_NAME = "cell-towers";
 const CELL_TOWER_CACHE_TIME = 30; // 1M
 const WIND_TURBINE_DATASET_NAME = "wind-turbines";
 const WIND_TURBINE_CACHE_TIME = 90; // 3M
-const CHIMNEY_DATASET_NAME = "chimneys";
-const CHIMNEY_CACHE_TIME = 90; // 3M
+const OBSTACLES_DATASET_NAME = "obstacles";
+const OBSTACLES_CACHE_TIME = 90; // 3M
 const LOCATION_NAME_DATASET_NAME = "location-names";
 const LOCATION_NAME_CACHE_TIME = 180; // 6M
 
@@ -381,7 +381,7 @@ const styleWindTurbine = {
 
   renderer: L.canvas(),
 };
-const styleChimney = {
+const styleObstacles = {
   fill: true,
   fillColor: "#555555", // #555555
   fillOpacity: 0.8,
@@ -786,23 +786,42 @@ function pointToLayerWindTurbine(point, latlng) {
   return L.circleMarker(latlng, styleWindTurbine);
 }
 
-// Functions to render Chimney features
-/* filterChimney(feature) */
-/* styleChimney(feature) */
-/* onEachChimney(feature, layer) */
-function onEachChimney(feature, layer) {
+// Functions to render Obstacle features
+/* filterObstacle(feature) */
+/* styleObstacle(feature) */
+/* onEachObstacle(feature, layer) */
+function onEachObstacle(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
   // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
-  layer.on("popupclose", (e) => resetHighlight(chimneyLayer, e.target, styleChimney));
+  layer.on("popupclose", (e) => resetHighlight(obstacleLayer, e.target, styleObstacles));
 
-  var text = "<b>Chimney</b>";
+  var text = "<b>Obstacle</b>";
+
+  // if (gfp["man_made"]) {
+  //   if (gfp["man_made"] == "tower") new_properties["_type"] = "Tower";
+  //   if (gfp["man_made"] == "chimney") new_properties["_type"] = "Chimney";
+  //   if (gfp["man_made"] == "crane") new_properties["_type"] = "Crane";
+  //   if (gfp["man_made"] == "antenna") new_properties["_type"] = "Antenna";
+  // }
+  // if (gfp["communication:radio"]) new_properties["_type"] = "Communication tower";
+  // if (gfp["communication:television"]) new_properties["_type"] = "Communication tower";
+  // if (gfp["tower:type"]) {
+  //   if (gfp["tower:type"] == "communication") new_properties["_type"] = "Communication tower";
+  //   if (gfp["tower:type"] == "cooling") new_properties["_type"] = "Cooling tower";
+  //   if (gfp["tower:type"] == "bell_tower") new_properties["_type"] = "Bell tower";
+  // }
+  // if (gfp["building"]) {
+  //   if (gfp["building"] == "water_tower") new_properties["_type"] = "Water tower";
+  //   if (gfp["building"] == "church") new_properties["_type"] = "Church";
+  //   if (gfp["building"] == "cathedral") new_properties["_type"] = "Cathedral";
+  // }
 
   layer.bindPopup(text);
 }
-/* pointToLayerWindTurbine(point, latlng) */
-function pointToLayerChimney(point, latlng) {
-  return L.circleMarker(latlng, styleChimney);
+/* pointToLayerObstacle(point, latlng) */
+function pointToLayerObstacle(point, latlng) {
+  return L.circleMarker(latlng, styleObstacles);
 }
 
 
@@ -869,9 +888,9 @@ const windTurbineLayer = L.geoJSON([], {
   onEachFeature: onEachWindTurbine,
   pointToLayer: pointToLayerWindTurbine,
 });
-const chimneyLayer = L.geoJSON([], {
-  onEachFeature: onEachChimney,
-  pointToLayer: pointToLayerChimney,
+const obstacleLayer = L.geoJSON([], {
+  onEachFeature: onEachObstacle,
+  pointToLayer: pointToLayerObstacle,
 });
 
 // Define base tile layers
@@ -929,7 +948,7 @@ const overlayMaps = {
   "High-Voltage Lines": highVoltageLineLayer,
   "Cell Towers": cellTowerLayer,
   "Wind Turbines": windTurbineLayer,
-  "Chimneys": chimneyLayer,
+  "Obstacles": obstacleLayer,
 };
 const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
@@ -938,22 +957,22 @@ function styleOverlayCheckboxes() {
   document.getElementsByClassName("leaflet-control-layers-overlays")[0].childNodes.forEach(child => {
     switch (child.childNodes[0].childNodes[1].textContent.trim()) {
       case "No-Fly Zones":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ed5151"); // #ed5151
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #ed5151;");
         break;
       case "Railways":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff0000"); // #ff0000
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #ff0000;");
         break;
       case "High-Voltage Lines":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#0000ff"); // #0000ff
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #0000ff;");
         break;
       case "Cell Towers":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#ff7800"); // #ff7800
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #ff7800;");
         break;
       case "Wind Turbines":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#cccccc"); // #cccccc
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #cccccc;");
         break;
-      case "Chimneys":
-        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color:#555555"); // #555555
+      case "Obstacles":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #555555;");
         break;
       default:
         break;
@@ -1006,9 +1025,12 @@ var IDataset;
 
 const datasetsDB = new DBDatasets();
 
+// if contains "demolished:", do not include it
+// for each feature, check if contains "height", to show in popup
+
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
-  const q = "[maxsize:16Mi][timeout:30];"
+  const q = "[maxsize:32Mi][timeout:30];"
     + 'area["name"="België / Belgique / Belgien"]->.belgie;'
     + filterString
     + "out geom;";
@@ -1067,7 +1089,7 @@ async function getRailways() {
   const response = await (await fetch(RAILWAY_URL)).json();
 
   // New object that will contain all the railway sections that are not deleted
-  var geojson = { "type": "FeatureCollection", "features": [] };
+  const geojson = { type: "FeatureCollection", features: [] };
 
   // Fix missing labels for railway sections
   for (let i = 0; i < response.features.length; i++) {
@@ -1128,7 +1150,7 @@ async function getHighVoltageLines() {
 
 async function getCellTowers() {
   // Fetch data
-  const q = buildOverpassQuery('( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"="yes"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); );');
+  const q = buildOverpassQuery('( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); );');
   const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
   const geojson = osm2geojson(response);
 
@@ -1189,15 +1211,82 @@ async function getWindTurbines() {
   return geojson;
 }
 
-async function getChimneys() {
-  // Fetch data
-  const q = buildOverpassQuery('node["man_made"="chimney"](area.belgie);');
-  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-  const geojson = osm2geojson(response);
+async function getObstacles() {
+  // Buildings (offices, appartments) that are tall
+  // nw["building"="office"]["building:levels"]["building:levels"!="1"]["building:levels"!="2"]["building:levels"!="3"]["building:levels"!="4"]["building:levels"!="5"]["building:levels"!="6"]["building:levels"!="7"]["building:levels"!="8"]["building:levels"!="9"](area.belgie);
+  // nw["building"="apartments"]["building:levels"]["building:levels"!="1"]["building:levels"!="2"]["building:levels"!="3"]["building:levels"!="4"]["building:levels"!="5"]["building:levels"!="6"]["building:levels"!="7"]["building:levels"!="8"]["building:levels"!="9"](area.belgie);
 
+  // New object that will contain all the data of the individual queries
+  const geojson = { type: "FeatureCollection", features: [] };
+
+  /**
+   * Towers
+   */
+  // Fetch data
+  const q1 = buildOverpassQuery('nw["man_made"="tower"](area.belgie);');
+  const response1 = await (await fetch(OVERPASS_URL, { method: "POST", body: q1 })).text();
+  const geojson1 = osm2geojson(response1);
+
+  // Combine individual results
+  if (geojson1 && geojson1.features) {
+    geojson.features = geojson.features.concat(geojson1.features);
+  }
+
+  /**
+   * Chimneys, Cranes, Water towers, Antennas, Communication towers
+   */
+  // Fetch data
+  const str2 = [
+    '(',
+    // Chimneys
+    'nw["man_made"="chimney"](area.belgie);',
+    // Cranes
+    'nw["man_made"="crane"](area.belgie);',
+    // Water towers
+    'nw["building"="water_tower"](area.belgie);',
+    // Antennas
+    'nw["man_made"="antenna"][!"ref:BE:BIPT"](area.belgie);',
+    // Communication towers
+    'nw["tower:type"="communication"][!"ref:BE:BIPT"](area.belgie);',
+    'nw["communication:radio"](area.belgie);',
+    'nw["communication:television"](area.belgie);',
+    ');'
+  ];
+  const q2 = buildOverpassQuery(str2.join(' '));
+  const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).text();
+  const geojson2 = osm2geojson(response2);
+
+  // Combine individual results
+  if (geojson2 && geojson2.features) {
+    geojson.features = geojson.features.concat(geojson2.features);
+  }
+
+  /**
+   * Churches, Cathedrals
+   */
+  // Fetch data
+  const q3 = buildOverpassQuery('( nw["building"="church"](area.belgie); nw["building"="cathedral"](area.belgie); );');
+  const response3 = await (await fetch(OVERPASS_URL, { method: "POST", body: q3 })).text();
+  const geojson3 = osm2geojson(response3);
+
+  // Combine individual results
+  if (geojson3 && geojson3.features) {
+    geojson.features = geojson.features.concat(geojson3.features);
+  }
+
+  // We can combine all data before stripping, because we will do the same for all data
   // Strip non-essential data
   for (let i = 0; i < geojson.features.length; i++) {
-    geojson.features[i].properties = {};
+    const gfp = geojson.features[i].properties;
+    var new_properties = {};
+
+    if (gfp["man_made"]) new_properties["man_made"] = gfp["man_made"];
+    if (gfp["building"]) new_properties["building"] = gfp["building"];
+    if (gfp["tower:type"]) new_properties["tower:type"] = gfp["tower:type"];
+    if (gfp["communication:radio"]) new_properties["communication:radio"] = gfp["communication:radio"];
+    if (gfp["communication:television"]) new_properties["communication:television"] = gfp["communication:television"];
+
+    geojson.features[i].properties = new_properties;
   }
 
   // Cache fetched data in IndexedDB
@@ -1205,8 +1294,8 @@ async function getChimneys() {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
-        name: CHIMNEY_DATASET_NAME,
-        validTimeDays: CHIMNEY_CACHE_TIME,
+        name: OBSTACLES_DATASET_NAME,
+        validTimeDays: OBSTACLES_CACHE_TIME,
         value: geojson,
       },
     });
@@ -1220,7 +1309,16 @@ async function getLocationNames() {
    * Town names
    */
   // Fetch data
-  const q = buildOverpassQuery('( node["place"="city"](area.belgie); node["place"="borough"](area.belgie); node["place"="suburb"](area.belgie); node["place"="town"](area.belgie); node["place"="village"](area.belgie); );');
+  const str = [
+    '(',
+    'node["place"="city"](area.belgie);',
+    'node["place"="borough"](area.belgie);',
+    'node["place"="suburb"](area.belgie);',
+    'node["place"="town"](area.belgie);',
+    'node["place"="village"](area.belgie);',
+    ');'
+  ]
+  const q = buildOverpassQuery(str.join(' '));
   const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
   const geojson = osm2geojson(response);
 
@@ -1356,15 +1454,15 @@ function processWindTurbines(value) {
 }
 
 /**
- * Create items for Chimneys.
+ * Create items for Obstacles.
  * 
  * @param {FeatureCollection<GeometryObject, any>} value
  */
-function processChimneys(value) {
-  console.log("Successfully got chimneys");
+function processObstacles(value) {
+  console.log("Successfully got obstacles");
   /* console.debug(value); */
 
-  chimneyLayer.addData(value);
+  obstacleLayer.addData(value);
   styleOverlayCheckboxes();
 }
 
@@ -1500,20 +1598,20 @@ datasetsDB.addJob({
   },
 });
 
-// Get Chimneys from cache or from online
+// Get Obstacles from cache or from online
 datasetsDB.addJob({
   type: EJobType.GetDataset,
   params: {
-    name: CHIMNEY_DATASET_NAME,
+    name: OBSTACLES_DATASET_NAME,
   },
   callback: (/** @type {IDataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
-      processChimneys(result.value);
+      processObstacles(result.value);
     } else {
-      getChimneys().then(
-        (value) => processChimneys(value),
-        (error) => console.error("Error getting chimneys:", error),
+      getObstacles().then(
+        (value) => processObstacles(value),
+        (error) => console.error("Error getting obstacles:", error),
       );
     }
   },
