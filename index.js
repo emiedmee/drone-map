@@ -758,6 +758,11 @@ function onEachCellTower(feature, layer) {
         text += `<br>&nbsp;\u2022 ${key.slice(7)}`
       }
     }
+
+    // Add height if it's in the properties
+    if (props["height"]) {
+      text += `<br>Height: ${props.height}m`;
+    }
   }
 
   layer.bindPopup(text);
@@ -778,6 +783,26 @@ function onEachWindTurbine(feature, layer) {
   layer.on("popupclose", (e) => resetHighlight(windTurbineLayer, e.target, styleWindTurbine));
 
   var text = "<b>Wind Turbine</b>";
+
+  if (feature.properties) {
+    const props = feature.properties;
+
+    // Add height if it's in the properties
+    if (props["height"]) {
+      // The height is from ground to top of the blade
+      text += `<br>Height: ${props.height}m`;
+    } else if (props["rotor:diameter"]) {
+      // Calculate height using the hub height and the radius of the blade
+      var rotor_diameter = parseInt(props["rotor:diameter"]);
+      if (props["height:hub"]) {
+        var height_hub = parseInt(props["height:hub"])
+        text += `<br>Height: ${rotor_diameter / 2 + height_hub}m`;
+      } else {
+        // Estimate the hub height as the radius of the blade
+        text += `<br>Height: ${rotor_diameter}m (estimate)`;
+      }
+    }
+  }
 
   layer.bindPopup(text);
 }
@@ -820,10 +845,10 @@ function onEachObstacle(feature, layer) {
       if (props["building"] == "church") text = "<b>Church</b>";
       if (props["building"] == "cathedral") text = "<b>Cathedral</b>";
     }
-    
+
     // Add height if it's in the properties
     if (props["height"]) {
-      text += `<br>Height: ${props.height.replaceAll('m')}m`;
+      text += `<br>Height: ${props.height}m`;
     }
   }
 
@@ -1175,6 +1200,7 @@ async function getCellTowers() {
         new_properties[key] = "";
       }
     }
+    if (gfp["height"]) new_properties["height"] = gfp["height"].replaceAll(' ', '').replaceAll('m', '');
 
     geojson.features[i].properties = new_properties;
   }
@@ -1202,7 +1228,14 @@ async function getWindTurbines() {
 
   // Strip non-essential data
   for (let i = 0; i < geojson.features.length; i++) {
-    geojson.features[i].properties = {};
+    const gfp = geojson.features[i].properties;
+
+    var new_properties = {};
+    if (gfp["height"]) new_properties["height"] = gfp["height"].replaceAll(' ', '').replaceAll('m', '');
+    if (gfp["height:hub"]) new_properties["height:hub"] = gfp["height:hub"].replaceAll(' ', '').replaceAll('m', '');
+    if (gfp["rotor:diameter"]) new_properties["rotor:diameter"] = gfp["rotor:diameter"].replaceAll(' ', '').replaceAll('m', '');
+
+    geojson.features[i].properties = new_properties;
   }
 
   // Cache fetched data in IndexedDB
@@ -1304,7 +1337,7 @@ async function getObstacles() {
     if (gfp["tower:type"]) new_properties["tower:type"] = gfp["tower:type"];
     if (gfp["communication:radio"]) new_properties["communication:radio"] = gfp["communication:radio"];
     if (gfp["communication:television"]) new_properties["communication:television"] = gfp["communication:television"];
-    if (gfp["height"]) new_properties["height"] = gfp["height"];
+    if (gfp["height"]) new_properties["height"] = gfp["height"].replaceAll(' ', '').replaceAll('m', '');
 
     rawGeojson.features[i].properties = new_properties;
 
