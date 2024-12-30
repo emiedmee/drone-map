@@ -798,24 +798,34 @@ function onEachObstacle(feature, layer) {
 
   var text = "<b>Obstacle</b>";
 
-  // if (gfp["man_made"]) {
-  //   if (gfp["man_made"] == "tower") new_properties["_type"] = "Tower";
-  //   if (gfp["man_made"] == "chimney") new_properties["_type"] = "Chimney";
-  //   if (gfp["man_made"] == "crane") new_properties["_type"] = "Crane";
-  //   if (gfp["man_made"] == "antenna") new_properties["_type"] = "Antenna";
-  // }
-  // if (gfp["communication:radio"]) new_properties["_type"] = "Communication tower";
-  // if (gfp["communication:television"]) new_properties["_type"] = "Communication tower";
-  // if (gfp["tower:type"]) {
-  //   if (gfp["tower:type"] == "communication") new_properties["_type"] = "Communication tower";
-  //   if (gfp["tower:type"] == "cooling") new_properties["_type"] = "Cooling tower";
-  //   if (gfp["tower:type"] == "bell_tower") new_properties["_type"] = "Bell tower";
-  // }
-  // if (gfp["building"]) {
-  //   if (gfp["building"] == "water_tower") new_properties["_type"] = "Water tower";
-  //   if (gfp["building"] == "church") new_properties["_type"] = "Church";
-  //   if (gfp["building"] == "cathedral") new_properties["_type"] = "Cathedral";
-  // }
+  if (feature.properties) {
+    const props = feature.properties;
+
+    // Decide type name
+    if (props["man_made"]) {
+      if (props["man_made"] == "tower") text = "<b>Tower</b>";
+      if (props["man_made"] == "chimney") text = "<b>Chimney</b>";
+      if (props["man_made"] == "crane") text = "<b>Crane</b>";
+      if (props["man_made"] == "antenna") text = "<b>Antenna</b>";
+    }
+    if (props["communication:radio"]) text = "<b>Communication tower</b>";
+    if (props["communication:television"]) text = "<b>Communication tower</b>";
+    if (props["tower:type"]) {
+      if (props["tower:type"] == "communication") text = "<b>Communication tower</b>";
+      if (props["tower:type"] == "cooling") text = "<b>Cooling tower</b>";
+      if (props["tower:type"] == "bell_tower") text = "<b>Bell tower</b>";
+    }
+    if (props["building"]) {
+      if (props["building"] == "water_tower") text = "<b>Water tower</b>";
+      if (props["building"] == "church") text = "<b>Church</b>";
+      if (props["building"] == "cathedral") text = "<b>Cathedral</b>";
+    }
+    
+    // Add height if it's in the properties
+    if (props["height"]) {
+      text += `<br>Height: ${props.height.replaceAll('m')}m`;
+    }
+  }
 
   layer.bindPopup(text);
 }
