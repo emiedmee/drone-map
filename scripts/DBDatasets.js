@@ -26,11 +26,12 @@ const EJobType = {
  */
 var IJob;
 
+/**
+ * Class that simplifies the interaction with IndexedDB and is used to store datasets.
+ * Can create, read, update and delete datasets.
+ * Has a mechanism to queue jobs, so they happen in order and makes sure everything happens inside transactions.
+ */
 class DBDatasets {
-  /**
-   * @param {Object} params
-   * @param {String} params.db_name
-   */
   constructor() {
     /** @type {String} */
     this.db_name = DB_NAME;

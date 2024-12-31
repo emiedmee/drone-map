@@ -1062,7 +1062,7 @@ const datasetsDB = new DBDatasets();
 
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
-  const q = "[maxsize:32Mi][timeout:45];"
+  const q = "[out:json][maxsize:32Mi][timeout:45];"
     + 'area["name"="België / Belgique / Belgien"]->.belgie;'
     + filterString
     + "out geom;";
@@ -1157,8 +1157,8 @@ async function getRailways() {
 async function getHighVoltageLines() {
   // Fetch data
   const q = buildOverpassQuery('way["power"="line"](area.belgie);');
-  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-  const geojson = osm2geojson(response);
+  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).json();
+  const geojson = osmtogeojson(response, { flatProperties: true });
 
   // Strip non-essential data
   for (let i = 0; i < geojson.features.length; i++) {
@@ -1183,8 +1183,8 @@ async function getHighVoltageLines() {
 async function getCellTowers() {
   // Fetch data
   const q = buildOverpassQuery('( node["ref:BE:BIPT"](area.belgie); node["communication:gsm-r"]["operator"="Infrabel"](area.belgie); node["tower:type"="communication"](area.belgie); );');
-  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-  const geojson = osm2geojson(response);
+  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).json();
+  const geojson = osmtogeojson(response, { flatProperties: true });
 
   // Strip non-essential data
   for (let i = 0; i < geojson.features.length; i++) {
@@ -1221,8 +1221,8 @@ async function getCellTowers() {
 async function getWindTurbines() {
   // Fetch data
   const q = buildOverpassQuery('node["generator:source"="wind"](area.belgie);');
-  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-  const geojson = osm2geojson(response);
+  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).json();
+  const geojson = osmtogeojson(response, { flatProperties: true });
 
   // Strip non-essential data
   for (let i = 0; i < geojson.features.length; i++) {
@@ -1264,8 +1264,8 @@ async function getObstacles() {
    */
   // Fetch data
   const q1 = buildOverpassQuery('nw["man_made"="tower"](area.belgie);');
-  const response1 = await (await fetch(OVERPASS_URL, { method: "POST", body: q1 })).text();
-  const geojson1 = osm2geojson(response1);
+  const response1 = await (await fetch(OVERPASS_URL, { method: "POST", body: q1 })).json();
+  const geojson1 = osmtogeojson(response1, { flatProperties: true });
 
   // Combine individual results
   if (geojson1 && geojson1.features) {
@@ -1293,8 +1293,8 @@ async function getObstacles() {
     ');'
   ];
   const q2 = buildOverpassQuery(str2.join(' '));
-  const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).text();
-  const geojson2 = osm2geojson(response2);
+  const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).json();
+  const geojson2 = osmtogeojson(response2, { flatProperties: true });
 
   // Combine individual results
   if (geojson2 && geojson2.features) {
@@ -1306,8 +1306,8 @@ async function getObstacles() {
    */
   // Fetch data
   const q3 = buildOverpassQuery('( nw["building"="church"](area.belgie); nw["building"="cathedral"](area.belgie); );');
-  const response3 = await (await fetch(OVERPASS_URL, { method: "POST", body: q3 })).text();
-  const geojson3 = osm2geojson(response3);
+  const response3 = await (await fetch(OVERPASS_URL, { method: "POST", body: q3 })).json();
+  const geojson3 = osmtogeojson(response3, { flatProperties: true });
 
   // Combine individual results
   if (geojson3 && geojson3.features) {
@@ -1341,22 +1341,21 @@ async function getObstacles() {
 
     // Transform "way" features to a point
     if (gfid.startsWith("way/")) {
+      /**
+       * GeoJson coordinates are [lng, lat] but Leaflet wants L.LatLng ( so [lat, lng] or { lat, lng } )
+       * so the coordinates of the bounds and center are the wrong way around
+       * (L.getCenter.lat = GeoJson.lng and L.getCenter.lng = GeoJson.lat)
+       * We need to flip the lat and lng in the end, because our layer is L.GeoJson
+       * so it expects coordinates in [lng, lat], which is [L.getCenter.lat, L.getCenter.lng]
+       */
       const layer = L.polygon(rawGeojson.features[i].geometry.coordinates, { stroke: false, fill: false });
-      layer.addTo(map); // Need to add layer to map before you can do getCenter()
-
-      // For some reason the lat and lng are flipped in the result of getCenter()
-      //layer.getCenter(): {…}
-      // lat: 5.55553883226026 <-- this number is the longitude (small number)
-      // lng: 50.588370180042084 <-- this number is the latitude (big number)
-      const center = layer.getCenter();
-      // [ lat (=> longitude (small number)), lng (=> latitude (big number)) ]
+      const center = layer.getBounds().getCenter();
       const coordinates = [center.lat, center.lng];
 
       rawGeojson.features[i].geometry = {
         type: "Point",
         coordinates: coordinates,
       };
-      layer.removeFrom(map);
     }
 
     geojson.features.push(rawGeojson.features[i]);
@@ -1392,8 +1391,8 @@ async function getLocationNames() {
     ');'
   ]
   const q = buildOverpassQuery(str.join(' '));
-  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).text();
-  const geojson = osm2geojson(response);
+  const response = await (await fetch(OVERPASS_URL, { method: "POST", body: q })).json();
+  const geojson = osmtogeojson(response, { flatProperties: true });
 
   // Strip non-essential data
   for (let i = 0; i < geojson.features.length; i++) {
@@ -1414,8 +1413,8 @@ async function getLocationNames() {
    */
   // Fetch data
   const q2 = buildOverpassQuery('( node["railway"="halt"]["operator"="NMBS/SNCB"](area.belgie); node["railway"="station"]["operator"="NMBS/SNCB"](area.belgie); );');
-  const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).text();
-  const geojson2 = osm2geojson(response2);
+  const response2 = await (await fetch(OVERPASS_URL, { method: "POST", body: q2 })).json();
+  const geojson2 = osmtogeojson(response2, { flatProperties: true });
 
   // Strip non-essential data
   for (let i = 0; i < geojson2.features.length; i++) {
