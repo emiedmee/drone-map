@@ -395,6 +395,13 @@ const styleObstacles = {
   renderer: L.canvas(),
 };
 
+const styleHighlight = {
+  stroke: true,
+  color: "#6699ff", // #6699ff
+  opacity: 1,
+  weight: 4,
+};
+
 // var someLayer = L.GeoJSON(geoJsonFeatureData, {
 //   filter: whether to show a feature or not
 //   style: for general styling of the features
@@ -668,7 +675,7 @@ function parseTimeField(d) {
   local = "<br>&nbsp;\u2022 Local: " + local.substring(2);
   return utc + local;
 }
-function createGeozonePopupContent(feature) {
+function popupContentGeozone(feature) {
   if (feature.properties) {
     const props = feature.properties;
     return (
@@ -690,7 +697,7 @@ function onEachGeozone(feature, layer) {
   // When geozone is clicked, replace popup content to include the height of the clicked location
   layer.on("click", (e) => {
     if (e.sourceTarget?.feature.properties && e.latlng) {
-      const baseContent = createGeozonePopupContent(e.sourceTarget.feature);
+      const baseContent = popupContentGeozone(e.sourceTarget.feature);
       e.sourceTarget.setPopupContent(baseContent
         + "<br>Surface height: ---"
       );
@@ -706,7 +713,7 @@ function onEachGeozone(feature, layer) {
 
   // Set default popup content
   if (feature.properties) {
-    layer.bindPopup(createGeozonePopupContent(feature));
+    layer.bindPopup(popupContentGeozone(feature));
   }
 }
 /* pointToLayerGeozone(point, latlng) */
@@ -868,12 +875,7 @@ function pointToLayerObstacle(point, latlng) {
  * @param {Boolean} bringToFront Wether to bring the layer to the front
  */
 function highlightFeature(layer, bringToFront) {
-  layer.setStyle({
-    stroke: true,
-    color: "#6699ff", // #6699ff
-    opacity: 1,
-    weight: 4,
-  });
+  layer.setStyle(styleHighlight);
 
   if (bringToFront) {
     layer.bringToFront();
