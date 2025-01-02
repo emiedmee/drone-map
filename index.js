@@ -838,6 +838,7 @@ function onEachObstacle(feature, layer) {
       if (props["man_made"] == "tower") text = "<b>Tower</b>";
       if (props["man_made"] == "chimney") text = "<b>Chimney</b>";
       if (props["man_made"] == "crane") text = "<b>Crane</b>";
+      if (props["man_made"] == "water_tower") text = "<b>Water tower</b>";
       if (props["man_made"] == "antenna") text = "<b>Antenna</b>";
     }
     if (props["communication:radio"]) text = "<b>Communication tower</b>";
@@ -1285,6 +1286,7 @@ async function getObstacles() {
     // Cranes
     'nw["man_made"="crane"](area.belgie);',
     // Water towers
+    'nw["man_made"="water_tower"](area.belgie);',
     'nw["building"="water_tower"](area.belgie);',
     // Antennas
     'nw["man_made"="antenna"][!"ref:BE:BIPT"](area.belgie);',
