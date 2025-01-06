@@ -24,7 +24,7 @@ const EJobType = {
  *  callback: Function,
  * }}
  */
-var IJob;
+const IJob = null;
 
 /**
  * Class that simplifies the interaction with IndexedDB and is used to store datasets.

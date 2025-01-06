@@ -600,44 +600,23 @@ function styleGeozone(feature) {
 }
 /* onEachGeozone(feature, layer) */
 function parseHeight(height, unit) {
-  /**
-   * The attributes "lowerLimit" and "upperLimit" seem to always be in "meter",
-   *  despite the "lowerAltitudeUnit" and "upperAltitudeUnit" being "ft" most of the times.
-   * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
-   *  they do a hard-coded conversion from meter to feet, regardless of the unit.
-   *    return strings.upperLimit
-   *       + ": " + Math.round($q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperLimit] / 0.3048)
-   *       + " " + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperUnit]
-   *       + " (" + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperAltitudeReference] + ")";
-   */
-  // height unit is always "m"
-  if (PREFERRED_UNIT == "ft") {
-    return `${parseInt(m2ft(height))} ${PREFERRED_UNIT}`;
-  } else if (PREFERRED_UNIT == "m") {
+  if (PREFERRED_UNIT == unit) {
     return `${parseInt(height)} ${PREFERRED_UNIT}`;
+  } else {
+    if (PREFERRED_UNIT == "ft") {
+      if (unit == "FL") {
+        return `${parseInt(fl2ft(height))} ${PREFERRED_UNIT}`;
+      } else if (unit == "m") {
+        return `${parseInt(m2ft(height))} ${PREFERRED_UNIT}`;
+      }
+    } else if (PREFERRED_UNIT == "m") {
+      if (unit == "FL") {
+        return `${parseInt(ft2m(fl2ft(height)))} ${PREFERRED_UNIT}`;
+      } else if (unit == "ft") {
+        return `${parseInt(ft2m(height))} ${PREFERRED_UNIT}`;
+      }
+    }
   }
-
-  // if (PREFERRED_UNIT == unit) {
-  //   return parseInt(height) + " " + unit;
-  // } else {
-  //   if (PREFERRED_UNIT == "ft") {
-  //     if (unit == "FL") {
-  //       return `${parseInt(fl2ft(height))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
-  //     } else if (unit == "ft") {
-  //       return `${parseInt(height)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
-  //     } else if (unit == "m") {
-  //       return `${parseInt(m2ft(height))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
-  //     }
-  //   } else if (PREFERRED_UNIT == "m") {
-  //     if (unit == "FL") {
-  //       return `${parseInt(ft2m(fl2ft(height)))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
-  //     } else if (unit == "ft") {
-  //       return `${parseInt(ft2m(height))} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
-  //     } else if (unit == "m") {
-  //       return `${parseInt(height)} ${PREFERRED_UNIT} (Original: ${height} ${unit})`;
-  //     }
-  //   }
-  // }
 }
 function parseTimeField(d) {
   function sub(str, start, end, offset) {
@@ -678,12 +657,24 @@ function parseTimeField(d) {
 function popupContentGeozone(feature) {
   if (feature.properties) {
     const props = feature.properties;
-    return (
-      `<b>${props.name}</b>`
-      + `<br>Lower limit: ${parseHeight(props.lowerLimit, props.lowerAltitudeUnit)} ${props.lowerAltitudeReference}`
-      + `<br>Upper limit: ${parseHeight(props.upperLimit, props.upperAltitudeUnit)} ${props.upperAltitudeReference}`
-      + `<br>Schedule: ${parseTimeField(props.TimeField)}`
-    );
+
+    /*
+     * The attributes "lowerLimit" and "upperLimit" seem to always be in "meter",
+     *  despite the "lowerAltitudeUnit" and "upperAltitudeUnit" being "ft" most of the times.
+     * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
+     *  they do a hard-coded conversion from meter to feet, regardless of the unit.
+     *    return strings.upperLimit
+     *       + ": " + Math.round($q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperLimit] / 0.3048)
+     *       + " " + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperUnit]
+     *       + " (" + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperAltitudeReference] + ")";
+     */
+
+    var text = `<b>${props.name}</b>`;
+    text += `<br>Lower limit: ${parseHeight(props.lowerLimit, "m" /* props.lowerAltitudeUnit */)} ${props.lowerAltitudeReference}`;
+    text += `<br>Upper limit: ${parseHeight(props.upperLimit, "m" /* props.upperAltitudeUnit */)} ${props.upperAltitudeReference}`;
+    text += `<br>Schedule: ${parseTimeField(props.TimeField)}`;
+
+    return text;
   } else {
     return "";
   }
@@ -962,7 +953,7 @@ const layers = [
 ];
 const map = L.map("map", {
   layers: layers,
-  maxBounds: [[51.5, 6], [49.5, 2]],
+  maxBounds: [[51.6, 6.5], [49.5, 2.2]],
 });
 
 // Request location of device and set view to location
@@ -1059,7 +1050,7 @@ eventForwarder.enable();
  *  value: Object,
  * }}
  */
-var IDataset;
+const IDataset = null;
 
 const datasetsDB = new DBDatasets();
 
