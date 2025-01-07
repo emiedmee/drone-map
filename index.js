@@ -20,22 +20,23 @@ const GEO_API_OFFSET = 25;
 const WGS84 = "+proj=longlat +datum=WGS84 +no_defs +type=crs";
 const BD72 = "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs";
 
+// Cache time in: hours
 const NOTAM_DATASET_NAME = "notams";
-const NOTAM_CACHE_TIME = 1; // 1D
+const NOTAM_CACHE_TIME = 4; // 4 hours
 const GEOZONE_DATASET_NAME = "geozones";
-const GEOZONE_CACHE_TIME = 1; // 1D
+const GEOZONE_CACHE_TIME = 4; // 4 hours
 const RAILWAY_DATASET_NAME = "railways";
-const RAILWAY_CACHE_TIME = 90; // 3M
+const RAILWAY_CACHE_TIME = 2160; // 3 months
 const HIGH_VOLTAGE_LINE_DATASET_NAME = "high-voltage-lines";
-const HIGH_VOLTAGE_LINE_CACHE_TIME = 60; // 2M
+const HIGH_VOLTAGE_LINE_CACHE_TIME = 1440; // 2 months
 const CELL_TOWER_DATASET_NAME = "cell-towers";
-const CELL_TOWER_CACHE_TIME = 30; // 1M
+const CELL_TOWER_CACHE_TIME = 720; // 1 month
 const WIND_TURBINE_DATASET_NAME = "wind-turbines";
-const WIND_TURBINE_CACHE_TIME = 90; // 3M
+const WIND_TURBINE_CACHE_TIME = 2160; // 3 monts
 const OBSTACLES_DATASET_NAME = "obstacles";
-const OBSTACLES_CACHE_TIME = 90; // 3M
+const OBSTACLES_CACHE_TIME = 2160; // 3 months
 const LOCATION_NAME_DATASET_NAME = "location-names";
-const LOCATION_NAME_CACHE_TIME = 180; // 6M
+const LOCATION_NAME_CACHE_TIME = 4320; // 6 months
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
@@ -381,7 +382,7 @@ const styleWindTurbine = {
 
   renderer: L.canvas(),
 };
-const styleObstacles = {
+const styleObstacle = {
   fill: true,
   fillColor: "#555555", // #555555
   fillOpacity: 0.8,
@@ -740,7 +741,7 @@ function onEachCellTower(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
   // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
-  layer.on("popupclose", (e) => resetHighlight(cellTowerLayer, e.target, styleCellTower));
+  layer.on("popupclose", (e) => resetHighlight(cellTowerLayer, e.target));
 
   var text = "<b>Cell Tower</b>";
 
@@ -767,7 +768,7 @@ function onEachCellTower(feature, layer) {
 }
 /* pointToLayerCellTower(point, latlng) */
 function pointToLayerCellTower(point, latlng) {
-  return L.circleMarker(latlng, styleCellTower);
+  return L.circleMarker(latlng);
 }
 
 // Functions to render WindTurbine features
@@ -778,7 +779,7 @@ function onEachWindTurbine(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
   // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
-  layer.on("popupclose", (e) => resetHighlight(windTurbineLayer, e.target, styleWindTurbine));
+  layer.on("popupclose", (e) => resetHighlight(windTurbineLayer, e.target));
 
   var text = "<b>Wind Turbine</b>";
 
@@ -806,7 +807,7 @@ function onEachWindTurbine(feature, layer) {
 }
 /* pointToLayerWindTurbine(point, latlng) */
 function pointToLayerWindTurbine(point, latlng) {
-  return L.circleMarker(latlng, styleWindTurbine);
+  return L.circleMarker(latlng);
 }
 
 // Functions to render Obstacle features
@@ -817,7 +818,7 @@ function onEachObstacle(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
   // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
-  layer.on("popupclose", (e) => resetHighlight(obstacleLayer, e.target, styleObstacles));
+  layer.on("popupclose", (e) => resetHighlight(obstacleLayer, e.target));
 
   var text = "<b>Obstacle</b>";
 
@@ -855,7 +856,7 @@ function onEachObstacle(feature, layer) {
 }
 /* pointToLayerObstacle(point, latlng) */
 function pointToLayerObstacle(point, latlng) {
-  return L.circleMarker(latlng, styleObstacles);
+  return L.circleMarker(latlng);
 }
 
 
@@ -910,14 +911,17 @@ const highVoltageLineLayer = L.geoJSON([], {
   style: styleHighVoltageLine,
 });
 const cellTowerLayer = L.geoJSON([], {
+  style: styleCellTower,
   onEachFeature: onEachCellTower,
   pointToLayer: pointToLayerCellTower,
 });
 const windTurbineLayer = L.geoJSON([], {
+  style: styleWindTurbine,
   onEachFeature: onEachWindTurbine,
   pointToLayer: pointToLayerWindTurbine,
 });
 const obstacleLayer = L.geoJSON([], {
+  style: styleObstacle,
   onEachFeature: onEachObstacle,
   pointToLayer: pointToLayerObstacle,
 });
@@ -1073,7 +1077,7 @@ async function getNotams() {
       type: EJobType.UpdateDataset,
       params: {
         name: NOTAM_DATASET_NAME,
-        validTimeDays: NOTAM_CACHE_TIME,
+        validTimeHours: NOTAM_CACHE_TIME,
         value: response,
       },
     });
@@ -1102,7 +1106,7 @@ async function getGeozones() {
       type: EJobType.UpdateDataset,
       params: {
         name: GEOZONE_DATASET_NAME,
-        validTimeDays: GEOZONE_CACHE_TIME,
+        validTimeHours: GEOZONE_CACHE_TIME,
         value: response,
       },
     });
@@ -1139,7 +1143,7 @@ async function getRailways() {
       type: EJobType.UpdateDataset,
       params: {
         name: RAILWAY_DATASET_NAME,
-        validTimeDays: RAILWAY_CACHE_TIME,
+        validTimeHours: RAILWAY_CACHE_TIME,
         value: geojson,
       },
     });
@@ -1165,7 +1169,7 @@ async function getHighVoltageLines() {
       type: EJobType.UpdateDataset,
       params: {
         name: HIGH_VOLTAGE_LINE_DATASET_NAME,
-        validTimeDays: HIGH_VOLTAGE_LINE_CACHE_TIME,
+        validTimeHours: HIGH_VOLTAGE_LINE_CACHE_TIME,
         value: geojson,
       },
     });
@@ -1203,7 +1207,7 @@ async function getCellTowers() {
       type: EJobType.UpdateDataset,
       params: {
         name: CELL_TOWER_DATASET_NAME,
-        validTimeDays: CELL_TOWER_CACHE_TIME,
+        validTimeHours: CELL_TOWER_CACHE_TIME,
         value: geojson,
       },
     });
@@ -1236,7 +1240,7 @@ async function getWindTurbines() {
       type: EJobType.UpdateDataset,
       params: {
         name: WIND_TURBINE_DATASET_NAME,
-        validTimeDays: WIND_TURBINE_CACHE_TIME,
+        validTimeHours: WIND_TURBINE_CACHE_TIME,
         value: geojson,
       },
     });
@@ -1362,7 +1366,7 @@ async function getObstacles() {
       type: EJobType.UpdateDataset,
       params: {
         name: OBSTACLES_DATASET_NAME,
-        validTimeDays: OBSTACLES_CACHE_TIME,
+        validTimeHours: OBSTACLES_CACHE_TIME,
         value: geojson,
       },
     });
@@ -1434,7 +1438,7 @@ async function getLocationNames() {
       type: EJobType.UpdateDataset,
       params: {
         name: LOCATION_NAME_DATASET_NAME,
-        validTimeDays: LOCATION_NAME_CACHE_TIME,
+        validTimeHours: LOCATION_NAME_CACHE_TIME,
         value: geojson,
       },
     });

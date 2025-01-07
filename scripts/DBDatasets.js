@@ -103,7 +103,7 @@ class DBDatasets {
           break;
 
         case EJobType.AddDataset:
-          this.addDataset(job.params.name, job.params.validTimeDays, job.params.value, (result) => {
+          this.addDataset(job.params.name, job.params.validTimeHours, job.params.value, (result) => {
             if (job.callback !== undefined) {
               job.callback(result);
             }
@@ -113,7 +113,7 @@ class DBDatasets {
           break;
 
         case EJobType.UpdateDataset:
-          this.updateDataset(job.params.name, job.params.validTimeDays, job.params.value, (result) => {
+          this.updateDataset(job.params.name, job.params.validTimeHours, job.params.value, (result) => {
             if (job.callback !== undefined) {
               job.callback(result);
             }
@@ -216,11 +216,11 @@ class DBDatasets {
    * Add a dataset to the database.
    * 
    * @param {String} name Name of the dataset
-   * @param {Number} validTimeDays How long the dataset is valid, in days
+   * @param {Number} validTimeHours How long the dataset is valid, in days
    * @param {Object} geoJson The GeoJSON data, the content of the dataset
    * @param {Function} callback Callback function for the result
    */
-  addDataset(name, validTimeDays, value, callback) {
+  addDataset(name, validTimeHours, value, callback) {
     const request = window.indexedDB.open(this.db_name, this.getVersion());
 
     request.onsuccess = (event) => {
@@ -229,7 +229,7 @@ class DBDatasets {
       const data = {
         name: name,
         validFrom: Date.now(),
-        validUntil: Date.now() + (1000 * 60 * 60 * 24 * validTimeDays),
+        validUntil: Date.now() + (1000 * 60 * 60 * validTimeHours),
         value: value,
       };
       const store = db.transaction([STORE_DATASET], "readwrite").objectStore(STORE_DATASET);
@@ -258,11 +258,11 @@ class DBDatasets {
    * Update a dataset in the database.
    * 
    * @param {String} name Name of the dataset
-   * @param {Number} validTimeDays How long the dataset is valid, in days
+   * @param {Number} validTimeHours How long the dataset is valid, in days
    * @param {Object} geoJson The GeoJSON data, the content of the dataset
    * @param {Function} callback Callback function for the result
    */
-  updateDataset(name, validTimeDays, value, callback) {
+  updateDataset(name, validTimeHours, value, callback) {
     const request = window.indexedDB.open(this.db_name, this.getVersion());
 
     request.onsuccess = (event) => {
@@ -271,7 +271,7 @@ class DBDatasets {
       const data = {
         name: name,
         validFrom: Date.now(),
-        validUntil: Date.now() + (1000 * 60 * 60 * 24 * validTimeDays),
+        validUntil: Date.now() + (1000 * 60 * 60 * validTimeHours),
         value: value,
       };
       const store = db.transaction([STORE_DATASET], "readwrite").objectStore(STORE_DATASET);
