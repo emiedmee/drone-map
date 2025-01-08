@@ -32,7 +32,7 @@ const HIGH_VOLTAGE_LINE_CACHE_TIME = 1440; // 2 months
 const CELL_TOWER_DATASET_NAME = "cell-towers";
 const CELL_TOWER_CACHE_TIME = 720; // 1 month
 const WIND_TURBINE_DATASET_NAME = "wind-turbines";
-const WIND_TURBINE_CACHE_TIME = 2160; // 3 monts
+const WIND_TURBINE_CACHE_TIME = 2160; // 3 months
 const OBSTACLES_DATASET_NAME = "obstacles";
 const OBSTACLES_CACHE_TIME = 2160; // 3 months
 const LOCATION_NAME_DATASET_NAME = "location-names";
@@ -229,30 +229,122 @@ const RAILWAY_DELETE = {
 
 /*
  ***********************************
+ *         TYPE DEFINITIONS        *
+ ***********************************
+ */
+
+// GeoJson
+/**
+ * @typedef {{
+ *  type: "Point",
+ *  coordinates: Array<Number>,
+ * }} Point
+ */
+
+/**
+ * @typedef {{
+ *  type: "LineString",
+ *  coordinates: Array<Array<Number>>,
+ * }} LineString
+ */
+
+/**
+ * @typedef {{
+ *  type: "Polygon",
+ *  coordinates: Array<Array<Array<Number>>>,
+ * }} Polygon
+ */
+
+/**
+ * @typedef {{
+ *  type: "MultiPoint",
+ *  coordinates: Array<Array<Number>>,
+ * }} MultiPoint
+ */
+
+/**
+ * @typedef {{
+ *  type: "MultiLineString",
+ *  coordinates: Array<Array<Array<Number>>>,
+ * }} MultiLineString
+ */
+
+/**
+ * @typedef {{
+ *  type: "MultiPolygon",
+ *  coordinates: Array<Array<Array<Array<Number>>>>,
+ * }} MultiPolygon
+ */
+
+/**
+ * @typedef {{
+ *  type: "Feature",
+ *  geometry: Point | LineString | Polygon | MultiPoint | MultiLineString | MultiPolygon,
+ *  properties: Object,
+ * }} Feature
+ */
+
+/**
+ * @typedef {{
+ *  type: "FeatureCollection",
+ *  features: Array<Feature>,
+ * }} FeatureCollection
+ */
+
+// IndexedDB
+/**
+ * @typedef {{
+ *  name: String,
+ *  validFrom: Number,
+ *  validUntil: Number,
+ *  value: Object,
+ * }} Dataset
+ */
+
+/*
+ ***********************************
  *      CONVERSION FUNCTIONS       *
  ***********************************
  */
 
 // 1 foot = 0.3048 metres
+/**
+ * @param {Number} ft
+ */
 function ft2m(ft) {
   return ft * 0.3048;
 }
+/**
+ * @param {Number} m
+ */
 function m2ft(m) {
   return m / 0.3048;
 }
 
 // 1 nautical mile = 1.852 kilometres
+/**
+ * @param {Number} nm
+ */
 function nm2km(nm) {
   return nm * 1.852;
 }
+/**
+ * @param {Number} km
+ */
 function km2nm(km) {
   return km / 1.852;
 }
 
 // flight levels = hectofeet
+/**
+ * @param {Number} fl
+ */
 function fl2ft(fl) {
   return fl * 100;
 }
+/**
+ * @param {Number} ft
+ */
 function ft2fl(ft) {
   return ft / 100;
 }
@@ -313,7 +405,7 @@ function encode(key, value) {
  ***********************************
  */
 
-/**
+/*
  * Properties that are numbers (weight, opacity, fillOpacity) MUST be entered as numbers, without quotes!
  */
 
@@ -412,6 +504,9 @@ const styleHighlight = {
 
 // Functions to render Geozone features
 /* filterGeozone(feature) */
+/**
+ * @param {Feature} feature
+ */
 function filterGeozone(feature) {
   var show = false;
 
@@ -425,46 +520,17 @@ function filterGeozone(feature) {
      * In the code of https://apps.geocortex.com/webviewer/?app=1062438763fd493699b4857b9872c6c4&locale=en (https://map.droneguide.be/)
      *  they do a hard-coded conversion from meter to feet, regardless of the unit.
      */
-    if (props.lowerLimit <= 125) // m
+    if (props.lowerLimit <= 125) { // m
       show = true;
-    // if (props.lowerAltitudeUnit) {
-    //   if (props.lowerAltitudeUnit == "ft") {
-    //     if (props.lowerLimit <= 410) // ft
-    //       show = true;
-    //   } else if (props.lowerAltitudeUnit == "m") {
-    //     if (props.lowerLimit <= 125) // m
-    //       show = true;
-    //   }
-    // }
-
-    // /**
-    //  * For NOTAM:
-    //  * If "location" == "EBBU"
-    //  *  - take first part of "notamText" until the "-"
-    //  *  - maybe until first 6/7 characters and trim whitespaces
-    //  *  - use that to compare with "name" LIKE "%.....%" for geozone
-    //  * Else:
-    //  *  - use "location" to compare with "code" for geozone
-    //  */
-    // if (NOTAMS && NOTAMS.features) {
-    //   NOTAMS.features.forEach(notam => {
-    //     if (notam.attributes) {
-    //       const n_a = notam.attributes;
-    //       if (n_a.location && n_a.location == "EBBU") {
-    //         if (n_a.notamText && props.name.includes(n_a.notamText.split("-")[0].trim()))
-    //           return true; // early return because geozone is active by NOTAM
-    //       } else {
-    //         if (n_a.location && props.code && n_a.location == props.code)
-    //           return true; // early return because geozone is active by NOTAM
-    //       }
-    //     }
-    //   });
-    // }
+    }
   }
 
   return show;
 }
 /* styleGeozone(feature) */
+/**
+ * @param {Feature} geozone
+ */
 function renderGeoZone(geozone) {
   // script return the correct symbology for the geozones
   const props = geozone.properties;
@@ -592,6 +658,9 @@ function renderGeoZone(geozone) {
 
   return "Become active today";
 }
+/**
+ * @param {Feature} feature
+ */
 function styleGeozone(feature) {
   switch (renderGeoZone(feature)) {
     case "Active": return styleGeozoneActive;
@@ -642,19 +711,22 @@ function parseTimeField(d) {
   if (d && d == "permanent")
     return "Permanent";
 
-  var utc = "";
-  var local = "";
+  var utc = [];
+  var local = [];
   for (var k in s) {
     var st = s[k];
     var begin = st.split("-")[0];
     var end = st.split("-")[1];
-    utc += `; ${sub(begin, 0, 2, 0)}:${begin.substring(2, 4)}-${sub(end, 0, 2, 0)}:${end.substring(2, 4)}`;
-    local += `; ${sub(begin, 0, 2, offset)}:${begin.substring(2, 4)}-${sub(end, 0, 2, offset)}:${end.substring(2, 4)}`;
+    utc.push(`${sub(begin, 0, 2, 0)}:${begin.substring(2, 4)}-${sub(end, 0, 2, 0)}:${end.substring(2, 4)}`);
+    local.push(`${sub(begin, 0, 2, offset)}:${begin.substring(2, 4)}-${sub(end, 0, 2, offset)}:${end.substring(2, 4)}`);
   }
-  utc = "<br>&nbsp;\u2022 UTC: " + utc.substring(2);
-  local = "<br>&nbsp;\u2022 Local: " + local.substring(2);
+  utc = "<br>&nbsp;\u2022 UTC: " + utc.join("; ");
+  local = "<br>&nbsp;\u2022 Local: " + local.join("; ");
   return utc + local;
 }
+/**
+ * @param {Feature} feature
+ */
 function popupContentGeozone(feature) {
   if (feature.properties) {
     const props = feature.properties;
@@ -680,6 +752,10 @@ function popupContentGeozone(feature) {
     return "";
   }
 }
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
 function onEachGeozone(feature, layer) {
   // Highlight geozone when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, false));
@@ -714,6 +790,10 @@ function onEachGeozone(feature, layer) {
 /* filterRailway(feature) */
 /* styleRailway(feature) */
 /* onEachRailway(feature, layer) */
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
 function onEachRailway(feature, layer) {
   // Highlight railway when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
@@ -737,6 +817,10 @@ function onEachRailway(feature, layer) {
 /* filterCellTower(feature) */
 /* styleCellTower(feature) */
 /* onEachCellTower(feature, layer) */
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
 function onEachCellTower(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
@@ -767,6 +851,10 @@ function onEachCellTower(feature, layer) {
   layer.bindPopup(text);
 }
 /* pointToLayerCellTower(point, latlng) */
+/**
+ * @param {Feature} point
+ * @param {L.LatLng} latlng
+ */
 function pointToLayerCellTower(point, latlng) {
   return L.circleMarker(latlng);
 }
@@ -775,6 +863,10 @@ function pointToLayerCellTower(point, latlng) {
 /* filterWindTurbine(feature) */
 /* styleWindTurbine(feature) */
 /* onEachWindTurbine(feature, layer) */
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
 function onEachWindTurbine(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
@@ -806,6 +898,10 @@ function onEachWindTurbine(feature, layer) {
   layer.bindPopup(text);
 }
 /* pointToLayerWindTurbine(point, latlng) */
+/**
+ * @param {Feature} point
+ * @param {L.LatLng} latlng
+ */
 function pointToLayerWindTurbine(point, latlng) {
   return L.circleMarker(latlng);
 }
@@ -814,6 +910,10 @@ function pointToLayerWindTurbine(point, latlng) {
 /* filterObstacle(feature) */
 /* styleObstacle(feature) */
 /* onEachObstacle(feature, layer) */
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
 function onEachObstacle(feature, layer) {
   // Highlight marker when popup is opened (when it is clicked)
   layer.on("popupopen", (e) => highlightFeature(e.target, true));
@@ -855,6 +955,10 @@ function onEachObstacle(feature, layer) {
   layer.bindPopup(text);
 }
 /* pointToLayerObstacle(point, latlng) */
+/**
+ * @param {Feature} point
+ * @param {L.LatLng} latlng
+ */
 function pointToLayerObstacle(point, latlng) {
   return L.circleMarker(latlng);
 }
@@ -966,7 +1070,7 @@ map.on("locationfound", (e) => { console.log("Found location:", e.latlng); });
 map.on("locationerror", (e) => { console.log(e.message); map.setView([50.848, 4.357], 11); });
 
 // Add scale control
-const scaleControl = L.control.scale().addTo(map);
+L.control.scale().addTo(map);
 
 // Create layer controls
 const baseMaps = {
@@ -1045,16 +1149,6 @@ eventForwarder.enable();
  *         DATA AQUISITION         *
  ***********************************
  */
-
-/**
- * @typedef {{
- *  name: String,
- *  validFrom: Number,
- *  validUntil: Number,
- *  value: Object,
- * }}
- */
-const IDataset = null;
 
 const datasetsDB = new DBDatasets();
 
@@ -1451,6 +1545,8 @@ async function getLocationNames() {
 var NOTAMS;
 /**
  * Get NOTAM warnings.
+ * 
+ * @param {NotamsResponse} value
  */
 function processNotams(value) {
   console.log("Successfully got NOTAMS");
@@ -1462,7 +1558,7 @@ function processNotams(value) {
 /**
  * Create items for No-Fly zones.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processGeozones(value) {
   console.log("Successfully got no-fly zones");
@@ -1475,7 +1571,7 @@ function processGeozones(value) {
 /**
  * Create items for Railway lines.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processRailways(value) {
   console.log("Successfully got railways");
@@ -1488,7 +1584,7 @@ function processRailways(value) {
 /**
  * Create items for High-voltage lines.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processHighVoltageLines(value) {
   console.log("Successfully got high-voltage lines");
@@ -1501,7 +1597,7 @@ function processHighVoltageLines(value) {
 /**
  * Create items for Cell towers.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processCellTowers(value) {
   console.log("Successfully got cell towers");
@@ -1514,7 +1610,7 @@ function processCellTowers(value) {
 /**
  * Create items for Wind turbines.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processWindTurbines(value) {
   console.log("Successfully got wind turbines");
@@ -1527,7 +1623,7 @@ function processWindTurbines(value) {
 /**
  * Create items for Obstacles.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processObstacles(value) {
   console.log("Successfully got obstacles");
@@ -1540,7 +1636,7 @@ function processObstacles(value) {
 /**
  * Get locations.
  * 
- * @param {FeatureCollection<GeometryObject, any>} value
+ * @param {FeatureCollection} value
  */
 function processLocationNames(value) {
   console.log("Successfully got location names");
@@ -1561,7 +1657,7 @@ datasetsDB.addJob({
   params: {
     name: NOTAM_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processNotams(result.value);
@@ -1580,7 +1676,7 @@ datasetsDB.addJob({
   params: {
     name: GEOZONE_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processGeozones(result.value);
@@ -1599,7 +1695,7 @@ datasetsDB.addJob({
   params: {
     name: RAILWAY_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processRailways(result.value);
@@ -1618,7 +1714,7 @@ datasetsDB.addJob({
   params: {
     name: HIGH_VOLTAGE_LINE_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processHighVoltageLines(result.value);
@@ -1637,7 +1733,7 @@ datasetsDB.addJob({
   params: {
     name: CELL_TOWER_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processCellTowers(result.value);
@@ -1656,7 +1752,7 @@ datasetsDB.addJob({
   params: {
     name: WIND_TURBINE_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processWindTurbines(result.value);
@@ -1675,7 +1771,7 @@ datasetsDB.addJob({
   params: {
     name: OBSTACLES_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processObstacles(result.value);
@@ -1694,7 +1790,7 @@ datasetsDB.addJob({
   params: {
     name: LOCATION_NAME_DATASET_NAME,
   },
-  callback: (/** @type {IDataset} */ result) => {
+  callback: (/** @type {Dataset} */ result) => {
     // Check if the cache is still valid
     if (result && result.validUntil > Date.now()) {
       processLocationNames(result.value);

@@ -12,9 +12,9 @@ class LocationSearchBar {
     /** @type {L.Map} */
     this._map = map;
 
+    /** @type {FeatureCollection} */
     this._locationNames = {
       type: "FeatureCollection",
-      /** @type {FeatureCollection<GeometryObject, any>} */
       features: [],
     };
 

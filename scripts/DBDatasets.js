@@ -22,9 +22,8 @@ const EJobType = {
  *  type: EJobType,
  *  params: Object,
  *  callback: Function,
- * }}
+ * }} Job
  */
-const IJob = null;
 
 /**
  * Class that simplifies the interaction with IndexedDB and is used to store datasets.
@@ -39,7 +38,7 @@ class DBDatasets {
     /** @type {String} */
     this.localStorageName = this.db_name + '-indexedDB-version';
 
-    /** @type {Array<IJob>} */
+    /** @type {Array<Job>} */
     this.jobs = [];
 
     this.addJob({
@@ -74,7 +73,7 @@ class DBDatasets {
   /**
    * Add a job to the queue of jobs to be executed on the database.
    * 
-   * @param {IJob} job
+   * @param {Job} job
    */
   addJob(job) {
     this.jobs.push(job);
