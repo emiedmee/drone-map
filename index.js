@@ -508,8 +508,6 @@ const styleHighlight = {
  * @param {Feature} feature
  */
 function filterGeozone(feature) {
-  var show = false;
-
   if (feature.properties) {
     const props = feature.properties;
 
@@ -521,11 +519,11 @@ function filterGeozone(feature) {
      *  they do a hard-coded conversion from meter to feet, regardless of the unit.
      */
     if (props.lowerLimit <= 125) { // m
-      show = true;
+      return true;
     }
   }
 
-  return show;
+  return false;
 }
 /* styleGeozone(feature) */
 /**
@@ -669,6 +667,13 @@ function styleGeozone(feature) {
   }
 }
 /* onEachGeozone(feature, layer) */
+/**
+ * Convert the given height to the height value in the preferred unit.
+ * 
+ * @param {String} height the height
+ * @param {String} unit current unit of the height
+ * @returns height in the preferred unit
+ */
 function parseHeight(height, unit) {
   if (PREFERRED_UNIT == unit) {
     return `${parseInt(height)} ${PREFERRED_UNIT}`;
@@ -725,12 +730,10 @@ function parseTimeField(d) {
   return utc + local;
 }
 /**
- * @param {Feature} feature
+ * @param {Object} properties properties of the Feature
  */
-function popupContentGeozone(feature) {
-  if (feature.properties) {
-    const props = feature.properties;
-
+function popupContentGeozone(properties) {
+  if (properties) {
     /*
      * The attributes "lowerLimit" and "upperLimit" seem to always be in "meter",
      *  despite the "lowerAltitudeUnit" and "upperAltitudeUnit" being "ft" most of the times.
@@ -742,10 +745,10 @@ function popupContentGeozone(feature) {
      *       + " (" + $q_featureGeozone.feature.attributes[$fieldNamesZone.result.upperAltitudeReference] + ")";
      */
 
-    var text = `<b>${props.name}</b>`;
-    text += `<br>Lower limit: ${parseHeight(props.lowerLimit, "m" /* props.lowerAltitudeUnit */)} ${props.lowerAltitudeReference}`;
-    text += `<br>Upper limit: ${parseHeight(props.upperLimit, "m" /* props.upperAltitudeUnit */)} ${props.upperAltitudeReference}`;
-    text += `<br>Schedule: ${parseTimeField(props.TimeField)}`;
+    var text = `<b>${properties.name}</b>`;
+    text += `<br>Lower limit: ${parseHeight(properties.lowerLimit, "m" /* properties.lowerAltitudeUnit */)} ${properties.lowerAltitudeReference}`;
+    text += `<br>Upper limit: ${parseHeight(properties.upperLimit, "m" /* properties.upperAltitudeUnit */)} ${properties.upperAltitudeReference}`;
+    text += `<br>Schedule: ${parseTimeField(properties.TimeField)}`;
 
     return text;
   } else {
@@ -765,14 +768,16 @@ function onEachGeozone(feature, layer) {
   // When geozone is clicked, replace popup content to include the height of the clicked location
   layer.on("click", (e) => {
     if (e.sourceTarget?.feature.properties && e.latlng) {
-      const baseContent = popupContentGeozone(e.sourceTarget.feature);
+      const baseContent = popupContentGeozone(e.sourceTarget.feature.properties);
       e.sourceTarget.setPopupContent(baseContent
-        + "<br>Surface height: ---"
+        + '<div class="separator"></div>'
+        + "Surface height: ---"
       );
       getHeight(e.latlng).then(height => {
         if (height) {
           e.sourceTarget.setPopupContent(baseContent
-            + `<br>Surface height: ${Math.round(height * 100) / 100} m`
+            + '<div class="separator"></div>'
+            + `Surface height: ${Math.round(height * 100) / 100} m`
           );
         }
       });
@@ -781,7 +786,7 @@ function onEachGeozone(feature, layer) {
 
   // Set default popup content
   if (feature.properties) {
-    layer.bindPopup(popupContentGeozone(feature));
+    layer.bindPopup(popupContentGeozone(feature.properties));
   }
 }
 /* pointToLayerGeozone(point, latlng) */

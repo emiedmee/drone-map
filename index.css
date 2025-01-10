@@ -107,3 +107,9 @@ body,
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none;  /* IE 10+ */
 }
+
+.separator {
+  height: 0px;
+  border-top: 1px solid lightgray;
+  margin: 5px 0;
+}
