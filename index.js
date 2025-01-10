@@ -301,6 +301,36 @@ const RAILWAY_DELETE = {
  * }} Dataset
  */
 
+// NOTAMS
+/**
+ * @typedef {{
+ *  attributes: Object,
+ * }} NotamsFeature
+ */
+
+/**
+ * @typedef {{
+ *  alias: String,
+ *  defaultValue: any,
+ *  domain: any,
+ *  length: Number,
+ *  name: String,
+ *  sqlType: String,
+ *  type: String,
+ * }} NotamsField
+ */
+
+/**
+ * @typedef {{
+ *  features: Array<NotamsFeature>,
+ *  fields: Array<NotamsField>,
+ *  globalIdFieldName: String,
+ *  objectIdFieldName: String,
+ *  uniqueIdField: Object,
+ * }} NotamsResponse
+ */
+
+
 /*
  ***********************************
  *      CONVERSION FUNCTIONS       *
@@ -431,6 +461,15 @@ const styleGeozoneNonActive = {
   color: "#ff0000", // #ff0000
   weight: 0.75,
   dashArray: "4",
+};
+const styleNotamGeozone = {
+  fill: true,
+  fillColor: "#1db9de", // #1db9de
+
+  stroke: true,
+  color: "#0e718a", // #0e718a
+  weight: 2,
+  radius: 8,
 };
 const styleRailway = {
   fill: false,
@@ -791,6 +830,210 @@ function onEachGeozone(feature, layer) {
 }
 /* pointToLayerGeozone(point, latlng) */
 
+// Functions to render features for Geozones activated by NOTAMS
+/* filterNotamActiveGeozone(feature) */
+/**
+ * Get NOTAMS that are active at the current date for a geozone.
+ * 
+ * @param {String} geozoneName
+ * @param {Date} currentDate
+ */
+function getActiveNotamsForGeozone(geozoneName, currentDate) {
+  /** @type {NotamsFeature[]} */
+  var activeNotams = [];
+
+  if (geozoneName && currentDate && notamProcessor && notamProcessor.geozonesActiveByNotams) {
+    if (Object.keys(notamProcessor.geozonesActiveByNotams).includes(geozoneName)) {
+      var notams = notamProcessor.geozonesActiveByNotams[geozoneName];
+      notams.forEach(notam => {
+        if (notam.attributes) {
+          const props = notam.attributes;
+
+          // Change dates so the hours won't impact filtering on date
+          var startDate = (new Date(props.activityStart)).setUTCHours(1, 0, 0);
+          var _currentDate = currentDate.setUTCHours(2, 0, 0);
+          var endDate = (new Date(props.validityEnd)).setUTCHours(3, 0, 0);
+
+          if (startDate <= _currentDate && _currentDate <= endDate) {
+            activeNotams.push(notam);
+          }
+        }
+      });
+    }
+  }
+  return activeNotams;
+}
+/**
+ * @param {Feature} feature
+ */
+function filterNotamActiveGeozone(feature) {
+  if (feature.properties && notamFutureControl) {
+    const props = feature.properties;
+
+    var activeNotams = getActiveNotamsForGeozone(props.name, notamFutureControl.getCurrentDate());
+    return activeNotams.length > 0;
+  }
+
+  return false;
+}
+/* styleNotamActiveGeozone(feature) */
+/* onEachNotamActiveGeozone(feature, layer) */
+/**
+ * Converts a unix timestamp to the preferred date string.
+ * 
+ * @param {Number} date
+ * @returns UTC date string
+ */
+function parseNotamDate(date) {
+  var _date = new Date(date);
+  return _date.getUTCFullYear()
+    + "/"
+    + String(_date.getUTCMonth() + 1).padStart(2, "0")
+    + "/"
+    + String(_date.getUTCDate()).padStart(2, "0")
+    + " "
+    + String(_date.getUTCHours()).padStart(2, "0")
+    + ":"
+    + String(_date.getUTCMinutes()).padStart(2, "0");
+}
+/**
+ * @param {Object} properties properties of the Feature
+ */
+function popupContentNotam(properties) {
+  if (properties) {
+    var text = `<b>NOTAM ${properties.notamId}</b>`;
+    text += `<br>Lower limit: ${parseHeight(properties.lowerLimit, properties.lowerLimitUnit)} ${properties.lowerLimitRef}`;
+    text += `<br>Upper limit: ${parseHeight(properties.upperLimit, properties.upperLimitUnit)} ${properties.upperLimitRef}`;
+    text += `<br>Start: ${parseNotamDate(properties.activityStart)} UTC`;
+    text += `<br>End: ${parseNotamDate(properties.validityEnd)} UTC`;
+    if (properties.schedule) {
+      text += `<br>Schedule: ${properties.schedule}`;
+    }
+    text += `<br>Text: <i>${properties.notamText}</i>`;
+
+    return text;
+  } else {
+    return "";
+  }
+}
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
+function onEachNotamActiveGeozone(feature, layer) {
+  // Highlight geozone when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, false));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(notamActiveGeozoneLayer, e.target));
+
+  // When geozone is clicked, replace popup content to include the height of the clicked location
+  layer.on("click", (e) => {
+    if (e.sourceTarget?.feature.properties && e.latlng && notamFutureControl) {
+      var baseContent = popupContentGeozone(e.sourceTarget.feature.properties);
+      var activeNotams = getActiveNotamsForGeozone(e.sourceTarget.feature.properties.name, notamFutureControl.getCurrentDate());
+      if (activeNotams.length > 0) {
+        var notamTexts = [];
+        activeNotams.forEach(notam => {
+          notamTexts.push(popupContentNotam(notam.attributes));
+        });
+        baseContent += '<div class="separator"></div>';
+        baseContent += notamTexts.join("<br>");
+      }
+
+      e.sourceTarget.setPopupContent(baseContent
+        + '<div class="separator"></div>'
+        + "Surface height: ---"
+      );
+      getHeight(e.latlng).then(height => {
+        if (height) {
+          e.sourceTarget.setPopupContent(baseContent
+            + '<div class="separator"></div>'
+            + `Surface height: ${Math.round(height * 100) / 100} m`
+          );
+        }
+      });
+    }
+  });
+
+  // Set default popup content
+  if (feature.properties && notamFutureControl) {
+    const props = feature.properties;
+    var text = popupContentGeozone(props);
+
+    var activeNotams = getActiveNotamsForGeozone(props.name, notamFutureControl.getCurrentDate());
+    if (activeNotams.length > 0) {
+      var notamTexts = [];
+      activeNotams.forEach(notam => {
+        notamTexts.push(popupContentNotam(notam.attributes));
+      });
+      text += '<div class="separator"></div>';
+      text += notamTexts.join("<br>");
+    }
+    layer.bindPopup(text);
+  }
+}
+/* pointToLayerNotamActiveGeozone(point, latlng) */
+
+// Functions to render features for new Geozones created by NOTAMS
+/* filterNotamNewGeozone(feature) */
+/**
+ * @param {Feature} feature
+ */
+function filterNotamNewGeozone(feature) {
+  if (feature.properties && notamFutureControl) {
+    const props = feature.properties;
+
+    // Change dates so the hours won't impact filtering on date
+    var startDate = (new Date(props.activityStart)).setUTCHours(1, 0, 0);
+    var currentDate = notamFutureControl.getCurrentDate().setUTCHours(2, 0, 0);
+    var endDate = (new Date(props.validityEnd)).setUTCHours(3, 0, 0);
+
+    return (startDate <= currentDate && currentDate <= endDate);
+  }
+
+  return false;
+}
+/* styleNotamNewGeozone(feature) */
+/* onEachNotamNewGeozone(feature, layer) */
+function onEachNotamNewGeozone(feature, layer) {
+  // Highlight marker when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, true));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(notamNewGeozoneLayer, e.target));
+
+  // When geozone is clicked, replace popup content to include the height of the clicked location
+  layer.on("click", (e) => {
+    if (e.sourceTarget?.feature.properties && e.latlng) {
+      const baseContent = popupContentNotam(e.sourceTarget.feature.properties);
+      e.sourceTarget.setPopupContent(baseContent
+        + '<div class="separator"></div>'
+        + "Surface height: ---"
+      );
+      getHeight(e.latlng).then(height => {
+        if (height) {
+          e.sourceTarget.setPopupContent(baseContent
+            + '<div class="separator"></div>'
+            + `Surface height: ${Math.round(height * 100) / 100} m`
+          );
+        }
+      });
+    }
+  });
+
+  // Set default popup content
+  if (feature.properties) {
+    layer.bindPopup(popupContentNotam(feature.properties));
+  }
+}
+/* pointToLayerNotamNewGeozone(point, latlng) */
+function pointToLayerNotamNewGeozone(point, latlng) {
+  if (point.properties.radius) {
+    return L.circle(latlng, { radius: point.properties.radius });
+  } else {
+    return L.circleMarker(latlng, styleNotamGeozone);
+  }
+}
+
 // Functions to render Railway features
 /* filterRailway(feature) */
 /* styleRailway(feature) */
@@ -1012,6 +1255,17 @@ const geozoneLayer = L.geoJSON([], {
   style: styleGeozone,
   onEachFeature: onEachGeozone,
 });
+const notamActiveGeozoneLayer = L.geoJSON([], {
+  filter: filterNotamActiveGeozone,
+  style: styleNotamGeozone,
+  onEachFeature: onEachNotamActiveGeozone,
+});
+const notamNewGeozoneLayer = L.geoJSON([], {
+  filter: filterNotamNewGeozone,
+  style: styleNotamGeozone,
+  onEachFeature: onEachNotamNewGeozone,
+  pointToLayer: pointToLayerNotamNewGeozone,
+});
 const railwayLayer = L.geoJSON([], {
   style: styleRailway,
   onEachFeature: onEachRailway,
@@ -1061,6 +1315,8 @@ const cartoLight = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/
 const layers = [
   osm,
   geozoneLayer,
+  notamActiveGeozoneLayer,
+  notamNewGeozoneLayer,
   railwayLayer,
   highVoltageLineLayer,
 ];
@@ -1086,6 +1342,7 @@ const baseMaps = {
 };
 const overlayMaps = {
   "No-Fly Zones": geozoneLayer,
+  "NOTAMS": notamActiveGeozoneLayer,
   "Railways": railwayLayer,
   "High-Voltage Lines": highVoltageLineLayer,
   "Cell Towers": cellTowerLayer,
@@ -1100,6 +1357,9 @@ function styleOverlayCheckboxes() {
     switch (child.childNodes[0].childNodes[1].textContent.trim()) {
       case "No-Fly Zones":
         child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #ed5151;");
+        break;
+      case "NOTAMS":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #1db9de;");
         break;
       case "Railways":
         child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #ff0000;");
@@ -1147,6 +1407,48 @@ const eventForwarder = new L.eventForwarder({
   },
 });
 eventForwarder.enable();
+
+
+/*
+ ***********************************
+ *             NOTAMS              *
+ ***********************************
+ */
+
+// Create instance of NotamProcessor to handle NOTAM messages
+const notamProcessor = new NotamProcessor();
+
+// Create Leaflet Control for viewing future NOTAMS
+const notamFutureControl = L.control.notamFuture({
+  position: 'bottomleft',
+  notamProcessor: notamProcessor,
+  activeGeozonesLayer: notamActiveGeozoneLayer,
+  newGeozonesLayer: notamNewGeozoneLayer,
+}).addTo(map);
+
+// Sync notamGeozoneLayer to geozoneOverrideLayer
+notamActiveGeozoneLayer.on("add", (event) => {
+  notamNewGeozoneLayer.addTo(map);
+  notamFutureControl.addTo(map);
+});
+notamActiveGeozoneLayer.on("remove", (event) => {
+  notamNewGeozoneLayer.removeFrom(map);
+  notamFutureControl.remove();
+});
+
+/**
+ * Parse the NOTAMS response after getting the data from the API.
+ */
+async function parseNotams() {
+  if (notamProcessor && notamProcessor.notams && notamProcessor.geozones) {
+    notamProcessor.geozonesActiveByNotams = await notamProcessor.getGeozonesActiveByNotams(notamProcessor.notams);
+    notamProcessor.geozonesDefinedByNotams = await notamProcessor.getGeozonesDefinedByNotams(notamProcessor.notams);
+
+    // Always do both to sync notamNewGeozoneLayer to notamActiveGeozoneLayer
+    notamActiveGeozoneLayer.addData(notamProcessor.geozones);
+    notamNewGeozoneLayer.addData(notamProcessor.geozonesDefinedByNotams);
+  }
+}
 
 
 /*
@@ -1547,7 +1849,6 @@ async function getLocationNames() {
 }
 
 
-var NOTAMS;
 /**
  * Get NOTAM warnings.
  * 
@@ -1557,7 +1858,18 @@ function processNotams(value) {
   console.log("Successfully got NOTAMS");
   /* console.debug(value); */
 
-  NOTAMS = value;
+  // Remove all newline and tab characters from the NOTAM messages
+  value.features.forEach(notam => {
+    notam.attributes.notamText = notam.attributes.notamText
+      .replaceAll("\n", " ")
+      .replaceAll("\r", " ")
+      .replaceAll("\t", " ")
+      .replaceAll("  ", " ");
+  });
+
+  notamProcessor.notams = value;
+  parseNotams();
+  styleOverlayCheckboxes();
 }
 
 /**
@@ -1570,6 +1882,10 @@ function processGeozones(value) {
   /* console.debug(value); */
 
   geozoneLayer.addData(value);
+  styleOverlayCheckboxes();
+
+  notamProcessor.geozones = value;
+  parseNotams();
   styleOverlayCheckboxes();
 }
 

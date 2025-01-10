@@ -113,3 +113,9 @@ body,
   border-top: 1px solid lightgray;
   margin: 5px 0;
 }
+
+.control-notam-future.leaflet-bar a {
+  width: unset;
+  padding: 0 5px;
+  font-size: var(--font-size);
+}
