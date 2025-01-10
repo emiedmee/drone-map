@@ -22,9 +22,9 @@ const BD72 = "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.166667233333
 
 // Cache time in: hours
 const NOTAM_DATASET_NAME = "notams";
-const NOTAM_CACHE_TIME = 4; // 4 hours
+const NOTAM_CACHE_TIME = 6; // 6 hours
 const GEOZONE_DATASET_NAME = "geozones";
-const GEOZONE_CACHE_TIME = 4; // 4 hours
+const GEOZONE_CACHE_TIME = 6; // 6 hours
 const RAILWAY_DATASET_NAME = "railways";
 const RAILWAY_CACHE_TIME = 2160; // 3 months
 const HIGH_VOLTAGE_LINE_DATASET_NAME = "high-voltage-lines";
