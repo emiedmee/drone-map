@@ -1427,6 +1427,7 @@ function layerToPartialKMLs(layer, layerType = "flight") {
         }
       }
 
+      // Convert to KML
       kmls = tokml(geojson, { simplestyle: true });
 
       // Add altitudeMode and extrude to geometry tag
@@ -1456,68 +1457,70 @@ const styleRegex = /<(?:StyleMap|Style) id="(.+?)">.+?<\/(?:StyleMap|Style)>/g;
 function layerToKML(layer, layerType = "flight", documentName = "", documentDescription = "") {
   var kmls = layerToPartialKMLs(layer, layerType);
 
-  if (kmls && kmls.length > 0) {
-    // Convert single string to array
-    if (typeof kmls === "string") {
-      kmls = [kmls];
-    }
+  if (!kmls || kmls.length <= 0) { // Empty when layer contains no shapes to export
+    return null;
+  }
 
-    // Construct start of KML
-    var documentKml = [KmlStart, "<Document>"];
-    if (documentName) {
-      documentKml.push(`<name>${documentName}</name>`);
-    }
-    if (documentDescription) {
-      documentKml.push(`<description>${documentDescription}</description>`);
-    }
+  // Convert single string to array
+  if (typeof kmls === "string") {
+    kmls = [kmls];
+  }
 
-    var styles = {};
-    var placemarks = [];
+  // Construct start of KML
+  var documentKml = [KmlStart, "<Document>"];
+  if (documentName) {
+    documentKml.push(`<name>${documentName}</name>`);
+  }
+  if (documentDescription) {
+    documentKml.push(`<description>${documentDescription}</description>`);
+  }
 
-    // Extract styles and Placemarks
-    kmls.forEach(kml => {
-      kml = kml.replaceAll("\n", " ")
-        .replaceAll("\r", " ")
-        .replaceAll("\t", " ")
-        .replaceAll("  ", " ");
+  var styles = {};
+  var placemarks = [];
 
-      // Get al style matches
-      var styleMatches = kml.match(new RegExp(styleRegex));
-      if (styleMatches) {
-        styleMatches.forEach(match => {
-          // Get id and full style
-          var matches = (new RegExp(styleRegex)).exec(match);
-          if (matches.length > 1) {
-            // Don't add duplicates
-            if (!Object.keys(styles).includes(matches[1])) {
-              styles[matches[1]] = matches[0];
-            }
+  // Extract styles and Placemarks
+  kmls.forEach(kml => {
+    kml = kml.replaceAll("\n", " ")
+      .replaceAll("\r", " ")
+      .replaceAll("\t", " ")
+      .replaceAll("  ", " ");
+
+    // Get al style matches
+    var styleMatches = kml.match(new RegExp(styleRegex));
+    if (styleMatches) {
+      styleMatches.forEach(match => {
+        // Get id and full style
+        var matches = (new RegExp(styleRegex)).exec(match);
+        if (matches.length > 1) {
+          // Don't add duplicates
+          if (!Object.keys(styles).includes(matches[1])) {
+            styles[matches[1]] = matches[0];
           }
-        });
-      }
-
-      // Only keep Placemark
-      var placemark = getTagFromKml(kml, "Placemark");
-
-      // Remove styles from placemark (should not be the case since styles are at same level as Placemark in Document)
-      Object.keys(styles).forEach(key => {
-        placemark.replaceAll(styles[key], "");
+        }
       });
+    }
 
-      placemarks.push(placemark);
+    // Only keep Placemark
+    var placemark = getTagFromKml(kml, "Placemark");
+
+    // Remove styles from placemark (should not be the case since styles are at same level as Placemark in Document)
+    Object.keys(styles).forEach(key => {
+      placemark.replaceAll(styles[key], "");
     });
 
-    // Insert styles
-    Object.keys(styles).forEach(key => documentKml.push(styles[key]));
+    placemarks.push(placemark);
+  });
 
-    // Insert placemarks
-    placemarks.forEach(placemark => documentKml.push(placemark));
+  // Insert styles
+  Object.keys(styles).forEach(key => documentKml.push(styles[key]));
 
-    // Add end
-    documentKml.push("</Document></kml>");
+  // Insert placemarks
+  placemarks.forEach(placemark => documentKml.push(placemark));
 
-    return documentKml.join("");
-  }
+  // Add end
+  documentKml.push("</Document></kml>");
+
+  return documentKml.join("");
 }
 
 const FLIGHT_ZONES_DOCUMENT_NAME = "Flight zones";
@@ -1534,6 +1537,10 @@ const BUFFER_ZONES_DOCUMENT_NAME = "Buffer zones";
 function exportToKML(documentName = "", documentDescription = "") {
   // Export flightZoneLayer to KML document
   var kmlFlightZone = layerToKML(flightZoneLayer, "flight", FLIGHT_ZONES_DOCUMENT_NAME);
+
+  if (!kmlFlightZone) { // Empty when layer contains no shapes to export
+    return null;
+  }
 
   // Export contingencyZoneLayer to KML document
   var kmlContingencyZone = layerToKML(contingencyZoneLayer, "contingency", CONTINGENCY_ZONES_DOCUMENT_NAME);
@@ -1673,6 +1680,11 @@ function validNumberValue(value) {
 async function exportToFile() {
   // Generate KML file
   var kml = exportToKML(SETTINGS.fileName);
+  if (!kml) { // Empty when layer contains no shapes to export
+    console.warn("Layer is empty, nothing to export");
+    alert("There are no shapes to export!");
+    return;
+  }
   var file = new Blob([kml], { type: "application/vnd.google-earth.kml+xml" });
 
   if (SETTINGS.fileType === "kml") {
