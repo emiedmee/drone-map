@@ -1580,7 +1580,7 @@ L.SettingsSidebarControl = L.Control.extend({
     this.link.title = "Close sidebar";
 
     this.img = L.DomUtil.create("img", "", this.link);
-    this.img.src = "/img/gear.svg";
+    this.img.src = "../img/gear.svg";
     this.img.alt = "Close";
 
     L.DomEvent.on(this.link, "click", function (event) {
