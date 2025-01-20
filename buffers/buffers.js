@@ -1588,14 +1588,14 @@ L.SettingsSidebarControl = L.Control.extend({
 
       if (this.open) {
         // Close the sidebar
-        document.documentElement.style.setProperty("--sidebar-width", "0px");
         document.getElementById("sidebar").classList.add("hidden");
+        document.documentElement.style.setProperty("--sidebar-width", "0px");
         this.link.title = "Open sidebar";
         this.img.alt = "Open";
       } else {
         // Open the sidebar
-        document.documentElement.style.removeProperty("--sidebar-width");
         document.getElementById("sidebar").classList.remove("hidden");
+        document.documentElement.style.removeProperty("--sidebar-width");
         this.link.title = "Close sidebar";
         this.img.alt = "Close";
       }
@@ -1611,12 +1611,17 @@ const settingsSidebarControl = new L.SettingsSidebarControl();
 map.addControl(settingsSidebarControl);
 
 // Sidebar close button
-var sidebarClose = document.getElementById("sidebarClose");
+const sidebarClose = document.getElementById("sidebarClose");
 sidebarClose.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopPropagation();
   settingsSidebarControl.link.click();
 });
+
+// If small screen size, start with sidebar closed
+if (window.screen.width <= 450) {
+  sidebarClose.click();
+}
 
 // Input elements of the import form
 const fileSelect = document.getElementById("fileSelect");

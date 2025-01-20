@@ -96,6 +96,10 @@ main {
   margin: 5px 0;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* Sidebar becomes fullscreen on portrait/small screen */
 @media screen and (max-width: 450px) {
   :root {
