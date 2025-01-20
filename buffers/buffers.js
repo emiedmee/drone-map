@@ -133,12 +133,12 @@ L.PolylineLinked = L.Polyline.extend({
     return this.redraw();
   },
 
-  remove: function () {
+  removeFrom: function (map) {
     // Remove buffer features
-    this.contingency.remove();
-    this.buffer.remove();
+    this.contingency.removeFrom(this.contingencyLayer);
+    this.buffer.removeFrom(this.bufferLayer);
 
-    return L.Polyline.prototype.remove.call(this);
+    return L.Polyline.prototype.removeFrom.call(this, map);
   },
 
   redraw: function () {
@@ -193,12 +193,12 @@ L.PolygonLinked = L.Polygon.extend({
     return this.redraw();
   },
 
-  remove: function () {
+  removeFrom: function (map) {
     // Remove buffer features
-    this.contingency.remove();
-    this.buffer.remove();
+    this.contingency.removeFrom(this.contingencyLayer);
+    this.buffer.removeFrom(this.bufferLayer);
 
-    return L.Polygon.prototype.remove.call(this);
+    return L.Polygon.prototype.removeFrom.call(this, map);
   },
 
   redraw: function () {
@@ -253,12 +253,12 @@ L.RectangleLinked = L.Rectangle.extend({
     return this.redraw();
   },
 
-  remove: function () {
+  removeFrom: function (map) {
     // Remove buffer features
-    this.contingency.remove();
-    this.buffer.remove();
+    this.contingency.removeFrom(this.contingencyLayer);
+    this.buffer.removeFrom(this.bufferLayer);
 
-    return L.Rectangle.prototype.remove.call(this);
+    return L.Rectangle.prototype.removeFrom.call(this, map);
   },
 
   redraw: function () {
@@ -313,12 +313,12 @@ L.CircleLinked = L.Circle.extend({
     return this.redraw();
   },
 
-  remove: function () {
+  removeFrom: function (map) {
     // Remove buffer features
-    this.contingency.remove();
-    this.buffer.remove();
+    this.contingency.removeFrom(this.contingencyLayer);
+    this.buffer.removeFrom(this.bufferLayer);
 
-    return L.Circle.prototype.remove.call(this);
+    return L.Circle.prototype.removeFrom.call(this, map);
   },
 
   redraw: function () {
@@ -743,7 +743,7 @@ map.on("editable:vertex:ctrlclick editable:vertex:metakeyclick", continueLine);
 // Shift + click shape (or buffers) to delete shape, while editing shape
 function deleteShape(event) {
   if (event.originalEvent.shiftKey && event.target.editEnabled()) {
-    event.target.remove();
+    event.target.removeFrom(flightZoneLayer);
     stopDrawing();
   }
 }
