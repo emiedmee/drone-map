@@ -1,6 +1,5 @@
 :root {
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
-  --margin: 0px;
   --font-size: 14px;
   --map-edge-margin: 10px;
   --search-bar-width: 250px;
@@ -18,15 +17,11 @@
   margin: 0px;
 }
 
-body {
-  margin: var(--margin);
-}
-
 html,
 body,
 #map {
-  height: calc(100% - 2 * var(--margin));
-  width: calc(100% - 2 * var(--margin));
+  width: 100%;
+  height: 100%;
 }
 
 #location-search {
