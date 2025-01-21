@@ -1,11 +1,13 @@
 const MIN_ZOOM = 9;
 const MAX_ZOOM = 19;
 
-const ARCGIS_LIMIT = "" // empty: no limit
-const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=geojson&outFields=*&returnGeometry=true&spatialRel=esriSpatialRelIntersects&" + encode("where", "status='validated'") + "&orderByFields=Shape__Area";
+const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?&f=geojson&outFields=*&returnGeometry=true&returnExceededLimitFeatures=true&" + encode("where", "status='validated'") + "&orderByFields=Shape__Area";
 // Shape__Area%2Cname%2Ccode%2ClowerAltitudeUnit%2CupperAltitudeUnit%2ClowerAltitudeReference%2CupperAltitudeReference%2CTimeField%2ClowerLimit%2CupperLimit%2Ccategories%2CwrittenStartTimeGeneral%2CwrittenEndTimeGeneral
-const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?resultRecordCount=" + ARCGIS_LIMIT + "&f=json&outFields=*&returnGeometry=false&spatialRel=esriSpatialRelIntersects&" + encode("where", "status='validated' AND last_version='yes'");
+const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?&f=json&outFields=*&returnGeometry=false&returnExceededLimitFeatures=true&" + encode("where", "status='validated' AND last_version='yes'");
 // notamId%2Cfir%2Clocation%2CactivityStart%2CvalidityEnd%2Cschedule%2ClowerLimit%2ClowerLimitUnit%2CupperLimit%2CupperLimitUnit%2ClowerLimitRef%2CupperLimitRef%2CnotamText
+
+// https://statbel.fgov.be/nl/open-data/datalab-grid-van-de-bevolking-met-cellen-van-variabele-grootte
+const POPULATION_DENSITY_URL = "https://services9.arcgis.com/AxvKXHgzoNemvsVh/ArcGIS/rest/services/Variable_cell_grid_2024_WFL1/FeatureServer/1/query?f=geojson&outFields=ms_pop,pop_dens&returnGeometry=true&returnExceededLimitFeatures=true&" + encode("where", "1=1");
 
 const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datasets/lijnsecties/exports/geojson";
 
@@ -28,6 +30,8 @@ const OBSTACLES_DATASET_NAME = "obstacles";
 const OBSTACLES_CACHE_TIME = 2160; // 3 months
 const LOCATION_NAME_DATASET_NAME = "location-names";
 const LOCATION_NAME_CACHE_TIME = 4320; // 6 months
+const POPULATION_DENSITY_DATASET_NAME = "population-density";
+const POPULATION_DENSITY_CACHE_TIME = 4320; // 6 months
 
 const PREFERRED_UNIT = "m"; // Options: ft, m
 
@@ -476,6 +480,17 @@ const styleObstacle = {
   opacity: 1,
   weight: 1,
   radius: 8,
+
+  renderer: L.canvas(),
+};
+const stylePopulationDensityBase = {
+  fill: true,
+  fillOpacity: 0.5,
+
+  stroke: true,
+  color: "#6e6e6e", // #6e6e6e
+  opacity: 1,
+  weight: 0.5,
 
   renderer: L.canvas(),
 };
@@ -1164,6 +1179,95 @@ function pointToLayerObstacle(point, latlng) {
   return L.circleMarker(latlng);
 }
 
+// Functions to render Population density features
+/* filterPopulationDensity(feature) */
+/**
+ * @param {Feature} feature
+ */
+function stylePopulationDensity(feature) {
+  if (feature.properties) {
+    if (feature.properties.pop_dens > 5000) {
+      // > 5000
+      return Object.assign({}, stylePopulationDensityBase, {
+        fillColor: "#54278f", // #54278f
+      });
+    } else if (feature.properties.pop_dens > 2000) {
+      // 2000 - 5000
+      return Object.assign({}, stylePopulationDensityBase, {
+        fillColor: "#756bb1", // #756bb1
+      });
+    } else if (feature.properties.pop_dens > 1000) {
+      // 1000 - 2000
+      return Object.assign({}, stylePopulationDensityBase, {
+        fillColor: "#9e9ac8", // #9e9ac8
+      });
+    } else if (feature.properties.pop_dens > 250) {
+      // 250 - 1000
+      return Object.assign({}, stylePopulationDensityBase, {
+        fillColor: "#cbc9e2", // #cbc9e2
+      });
+    } else if (feature.properties.pop_dens > 1) {
+      // 1 - 250
+      return Object.assign({}, stylePopulationDensityBase, {
+        fillColor: "#f2f0f7", // #f2f0f7
+      });
+    } else {
+      // < 1
+      return Object.assign({}, stylePopulationDensityBase, {
+        fill: false,
+      });
+    }
+  }
+}
+/**
+ * @param {Object} properties properties of the Feature
+ */
+function popupContentPopulationDensity(properties) {
+  if (properties) {
+    var text = "";
+    text += `Population: ${properties.ms_pop}`;
+    text += `<br>Population density: ${Math.round(properties.pop_dens)}`;
+    return text;
+  } else {
+    return "";
+  }
+}
+/**
+ * @param {Feature} feature
+ * @param {L.Layer} layer
+ */
+function onEachPopulationDensity(feature, layer) {
+  // Highlight population density square when popup is opened (when it is clicked)
+  layer.on("popupopen", (e) => highlightFeature(e.target, false));
+  // Remove highlight when popup is closed (when something else is clicked or the popup is closed)
+  layer.on("popupclose", (e) => resetHighlight(populationDensityLayer, e.target));
+
+  // When population density square is clicked, replace popup content to include the height of the clicked location
+  layer.on("click", (e) => {
+    if (e.sourceTarget?.feature.properties && e.latlng) {
+      const baseContent = popupContentPopulationDensity(e.sourceTarget.feature.properties);
+      e.sourceTarget.setPopupContent(baseContent
+        + '<div class="separator"></div>'
+        + "Surface height: ---"
+      );
+      surfaceHeightManager.getHeight(e.latlng).then(height => {
+        if (height) {
+          e.sourceTarget.setPopupContent(baseContent
+            + '<div class="separator"></div>'
+            + `Surface height: ${Math.round(height * 100) / 100} m`
+          );
+        }
+      });
+    }
+  });
+
+  // Set default popup content
+  if (feature.properties) {
+    layer.bindPopup(popupContentPopulationDensity(feature.properties));
+  }
+}
+/* pointToLayerPopulationDensity(point, latlng) */
+
 
 /**
  * Highlight the given layer. Option to do layer.bringToFront().
@@ -1241,6 +1345,10 @@ const obstacleLayer = L.geoJSON([], {
   onEachFeature: onEachObstacle,
   pointToLayer: pointToLayerObstacle,
 });
+const populationDensityLayer = L.geoJSON([], {
+  style: stylePopulationDensity,
+  onEachFeature: onEachPopulationDensity,
+});
 
 // Define base tile layers
 const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -1301,6 +1409,7 @@ const overlayMaps = {
   "Cell Towers": cellTowerLayer,
   "Wind Turbines": windTurbineLayer,
   "Obstacles": obstacleLayer,
+  "Population density": populationDensityLayer,
 };
 const layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
@@ -1790,6 +1899,34 @@ async function getLocationNames() {
   return geojson;
 }
 
+async function getPopulationDensity() {
+  const data = { type: "FeatureCollection", features: [] };
+
+  var res;
+  var offset = 0;
+  do {
+    res = await (await fetch(POPULATION_DENSITY_URL + "&resultOffset=" + offset)).json();
+    if (res?.features.length) {
+      offset += res.features.length;
+      data.features = data.features.concat(res.features);
+    }
+  } while (res?.properties?.exceededTransferLimit);
+
+  // Cache fetched data in IndexedDB
+  if (data.features.length) {
+    datasetsDB.addJob({
+      type: EJobType.UpdateDataset,
+      params: {
+        name: POPULATION_DENSITY_DATASET_NAME,
+        validTimeHours: POPULATION_DENSITY_CACHE_TIME,
+        value: data,
+      },
+    });
+  }
+
+  return data;
+}
+
 
 /**
  * Get NOTAM warnings.
@@ -1911,6 +2048,19 @@ function processLocationNames(value) {
     location_search_results_name: "location-search-results",
   });
   locationSearchBar.setLocationNames(value);
+}
+
+/**
+ * Create items for Population density.
+ * 
+ * @param {FeatureCollection} value
+ */
+function processPopulationDensity(value) {
+  console.log("Successfully got population density");
+  /* console.debug(value); */
+
+  populationDensityLayer.addData(value);
+  styleOverlayCheckboxes();
 }
 
 
@@ -2066,4 +2216,21 @@ datasetsDB.addJob({
   },
 });
 
-
+// Get Population density from cache or from online
+datasetsDB.addJob({
+  type: EJobType.GetDataset,
+  params: {
+    name: POPULATION_DENSITY_DATASET_NAME,
+  },
+  callback: (/** @type {Dataset} */ result) => {
+    // Check if the cache is still valid
+    if (result && result.validUntil > Date.now()) {
+      processPopulationDensity(result.value);
+    } else {
+      getPopulationDensity().then(
+        (value) => processPopulationDensity(value),
+        (error) => console.error("Error getting population density:", error),
+      );
+    }
+  },
+});
