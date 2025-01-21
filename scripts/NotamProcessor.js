@@ -150,47 +150,50 @@ const AIRODROME_MAPPING = {
   "douzy": ["LFSJ"],
 };
 
-/**
- * Matches list of coordinates from first latitude to last longitude
- */
-const allCoordinatesRegex = new RegExp(/\d+[\.,]?\d*[NS].+\d+[\.,]?\d*[EW]/g);
-
-/**
- * Matches the individual parts of a coordinate to parse it
- */
-const coordinatesRegex = new RegExp(/^(\d+[\.,]?\d*)([NS])\s*(\d+[\.,]?\d*)([EW])$/g);
-
-/**
- * Matches the radius of a circle
- */
-const radiusRegex = new RegExp(/RAD(?:IUS)?\s*(\d+[\.,]?\d*)\s?NM/g);
-
-/**
- * Matches certain keywords/patterns that indicate a geozone is included in the notam message
- */
-const geoTypesRegex = new RegExp(/(\b((EB)|(ED)|(EH)|(EL)|(LF))[A-Z]{2}\b)|(((EBR)|(RMZ)|(HTA)|(LFA)|(TMA)|(CTA)|(TSA)|(TRA))\d+[A-Z]?)/g);
-
-/**
- * Matches certain keyword/pattern that indicates a CTR is included in the notam message
- */
-const ctrRegex = new RegExp(/[a-zA-Z]+ CTR/g);
-
-
 class NotamProcessor {
   /**
-   * @param {L.GeoJSON} activeGeozonesLayer Layer on which geozones will be added that are active because of NOTAMS
-   * @param {L.GeoJSON} newGeozonesLayer Layer on which new geozones will be added that are created by NOTAMS
+   * Matches list of coordinates from first latitude to last longitude
    */
-  constructor() {
+  static RegexAllCoordinates = new RegExp(/\d+[\.,]?\d*[NS].+\d+[\.,]?\d*[EW]/g);
+
+  /**
+   * Matches the individual parts of a coordinate to parse it
+   */
+  static RegexCoordinates = new RegExp(/^(\d+[\.,]?\d*)([NS])\s*(\d+[\.,]?\d*)([EW])$/g);
+
+  /**
+   * Matches the radius of a circle
+   */
+  static RegexRadius = new RegExp(/RAD(?:IUS)?\s*(\d+[\.,]?\d*)\s?NM/g);
+
+  /**
+   * Matches certain keywords/patterns that indicate a geozone is included in the notam message
+   */
+  static RegexGeoTypes = new RegExp(/(\b((EB)|(ED)|(EH)|(EL)|(LF))[A-Z]{2}\b)|(((EBR)|(RMZ)|(HTA)|(LFA)|(TMA)|(CTA)|(TSA)|(TRA))\d+[A-Z]?)/g);
+
+  /**
+   * Matches certain keyword/pattern that indicates a CTR is included in the notam message
+   */
+  static RegexCtr = new RegExp(/[a-zA-Z]+ CTR/g);
+
+  //  * @param {L.GeoJSON} activeGeozonesLayer Layer on which geozones will be added that are active because of NOTAMS
+  //  * @param {L.GeoJSON} newGeozonesLayer Layer on which new geozones will be added that are created by NOTAMS
+  /**
+   * @param {NotamsResponse} notams optional, response data of the API containing the NOTAMS
+   * @param {FeatureCollection} geozones optional, collection of geozones
+   */
+  constructor(notams = null, geozones = null) {
     /**
+     * Response data of the API containing the NOTAMS
      * @type {NotamsResponse}
      */
-    this.notams = null;
+    this.notams = notams;
 
     /**
+     * Collection of geozones
      * @type {FeatureCollection}
      */
-    this.geozones = null;
+    this.geozones = geozones;
 
     /**
      * Geozones that have NOTAMS that make them active at some point
@@ -208,15 +211,14 @@ class NotamProcessor {
   // Main functions
   /**
    * Get a dictionary of geozones with a list of all the NOTAMS that cause these geozones to become active.
-   * 
-   * @param {NotamsResponse} notams
+   * @note Make sure `NotamProcessor.notams` is set first.
    */
-  async getGeozonesActiveByNotams(notams) {
-    if (notams && notams.features) {
+  async getGeozonesActiveByNotams() {
+    if (this.notams && this.notams.features) {
       /** @type {Object.<string, NotamsFeature[]>} */
       var dictionary = {};
 
-      notams.features.forEach(notam => {
+      this.notams.features.forEach(notam => {
         var geozones = this.findGeozonesInNotam(notam.attributes.notamText);
         if (geozones && geozones.length > 0) {
           geozones.forEach(geozone => {
@@ -236,37 +238,36 @@ class NotamProcessor {
 
   /**
    * Get all new geozones that are created by NOTAMS.
-   * 
-   * @param {NotamsResponse} notams
+   * @note Make sure `NotamProcessor.notams` is set first.
    */
-  async getGeozonesDefinedByNotams(notams) {
-    if (notams && notams.features) {
+  async getGeozonesDefinedByNotams() {
+    if (this.notams && this.notams.features) {
       /** @type {FeatureCollection} */
       var geozones = { type: "FeatureCollection", features: [] };
 
-      notams.features.forEach(notam => {
+      this.notams.features.forEach(notam => {
         if (notam.attributes) {
           /** @type {Array<String>} */
-          var coordinates = notam.attributes.notamText.match(allCoordinatesRegex);
+          var coordinates = notam.attributes.notamText.match(NotamProcessor.RegexAllCoordinates);
           /** @type {Array<String>} */
-          var radius = notam.attributes.notamText.match(radiusRegex);
+          var radius = notam.attributes.notamText.match(NotamProcessor.RegexRadius);
 
           if (coordinates) {
             coordinates = coordinates[0].split("-")
               .map(coordinate => coordinate.trim())
-              .filter(coordinate => coordinate.match(coordinatesRegex));
+              .filter(coordinate => coordinate.match(NotamProcessor.RegexCoordinates));
 
             if (coordinates.length == 1) {
               if (radius) {
                 // Circle
-                notam.attributes["radius"] = this.parseNotamRadius(radius[0]);
+                notam.attributes["radius"] = NotamProcessor.parseNotamRadius(radius[0]);
                 geozones.features.push({
                   type: "Feature",
                   id: notam.attributes.OBJECTID,
                   properties: notam.attributes,
                   geometry: {
                     type: "Point",
-                    coordinates: this.latlngswap(this.parseNotamCoordinates(coordinates[0])),
+                    coordinates: NotamProcessor.latlngswap(NotamProcessor.parseNotamCoordinates(coordinates[0])),
                   },
                 });
               } else {
@@ -277,7 +278,7 @@ class NotamProcessor {
                   properties: notam.attributes,
                   geometry: {
                     type: "Point",
-                    coordinates: this.latlngswap(this.parseNotamCoordinates(coordinates[0])),
+                    coordinates: NotamProcessor.latlngswap(NotamProcessor.parseNotamCoordinates(coordinates[0])),
                   },
                 });
               }
@@ -289,7 +290,7 @@ class NotamProcessor {
                 properties: notam.attributes,
                 geometry: {
                   type: "Polygon",
-                  coordinates: [coordinates.map(c => this.latlngswap(this.parseNotamCoordinates(c)))],
+                  coordinates: [coordinates.map(c => NotamProcessor.latlngswap(NotamProcessor.parseNotamCoordinates(c)))],
                 },
               });
             }
@@ -300,6 +301,20 @@ class NotamProcessor {
       return geozones;
     }
     return null;
+  }
+
+  /**
+   * Parse the NOTAMS response after getting the data from the API.
+   * 
+   * @returns Indicates if the function executed successfully (only if `notams` and `geozones` are set first)
+   */
+  async parseNotams() {
+    if (this.notams && this.geozones) {
+      this.geozonesActiveByNotams = await this.getGeozonesActiveByNotams();
+      this.geozonesDefinedByNotams = await this.getGeozonesDefinedByNotams();
+      return true;
+    }
+    return false;
   }
 
   // Utility and conversion functions
@@ -325,19 +340,20 @@ class NotamProcessor {
       return text.length >= 5 ? text.substring(2) : text;
     }
 
-    var notamStripped = strip(notamText);
-    var notamStrippedSub = substr(notamStripped);
-    var notamPossibleGeozone = notamText.match(geoTypesRegex);
-    var notamPossibleCtr = notamText.match(ctrRegex);
-    if (!notamPossibleGeozone && notamPossibleCtr) {
-      var airodrome = notamPossibleCtr[0].substring(0, notamPossibleCtr[0].length - 4)
-      if (Object.keys(AIRODROME_MAPPING).includes(airodrome.toLowerCase())) {
-        notamPossibleGeozone = [AIRODROME_MAPPING[airodrome.toLowerCase()][0]];
+    if (notamText && this.geozones && this.geozones.features) {
+      var notamStripped = strip(notamText);
+      var notamStrippedSub = substr(notamStripped);
+      var notamPossibleGeozone = notamText.match(NotamProcessor.RegexGeoTypes);
+      var notamPossibleCtr = notamText.match(NotamProcessor.RegexCtr);
+      if (!notamPossibleGeozone && notamPossibleCtr) {
+        // Cross-reference possible CTR match with the ICAO-code of the CTR
+        var airodrome = notamPossibleCtr[0].substring(0, notamPossibleCtr[0].length - 4)
+        if (Object.keys(AIRODROME_MAPPING).includes(airodrome.toLowerCase())) {
+          notamPossibleGeozone = [AIRODROME_MAPPING[airodrome.toLowerCase()][0]];
+        }
       }
-    }
 
-    if (notamProcessor && notamProcessor.geozones) {
-      return notamProcessor.geozones.features
+      return this.geozones.features
         .filter(geozone => {
           var geozoneStripped = strip(geozone.properties.name);
           var geozoneStrippedSub = substr(geozoneStripped);
@@ -349,9 +365,8 @@ class NotamProcessor {
             || notamStrippedSub.includes(geozoneStrippedSub)
         })
         .map(geozone => geozone.properties.name);
-    } else {
-      return [];
     }
+    return [];
   }
 
   /**
@@ -360,7 +375,7 @@ class NotamProcessor {
    * @param {String} coordinates string containing "Latitude Longitude" from a NOTAM message
    * @returns {[Number, Number] | null} coordinates in format [lat, lng]
    */
-  parseNotamCoordinates(coordinates) {
+  static parseNotamCoordinates(coordinates) {
     /*
      * Coordinates in NOTAM message are DMS (not DD)
      *  DDMMSS[.SS] N
@@ -377,7 +392,7 @@ class NotamProcessor {
      * 5029N     50 29 00
      * 00457E     4 56 00
      */
-    var matches = (new RegExp(coordinatesRegex)).exec(coordinates.replaceAll(",", "."));
+    var matches = (new RegExp(NotamProcessor.RegexCoordinates)).exec(coordinates.replaceAll(",", "."));
     if (matches && matches.length > 4) {
       // Latitude
       /*
@@ -537,13 +552,13 @@ class NotamProcessor {
    * @param {String} radius string containing a radius in nautical miles from a NOTAM message
    * @returns radius in meter
    */
-  parseNotamRadius(radius) {
+  static parseNotamRadius(radius) {
     function nm2km(nm) {
       // 1 nautical mile = 1.852 kilometres
       return nm * 1.852;
     }
 
-    var matches = (new RegExp(radiusRegex)).exec(radius.replaceAll(",", "."));
+    var matches = (new RegExp(NotamProcessor.RegexRadius)).exec(radius.replaceAll(",", "."));
     if (matches && matches.length > 1) {
       var radius_nm = parseFloat(matches[1]);
       return nm2km(radius_nm) * 1000;
@@ -557,12 +572,11 @@ class NotamProcessor {
    * @param {[Number, Number]} coordinates coordinates to swap: (1) [lat, lng] coordinates - (2) [lng, lat] coordinates
    * @returns {[Number, Number] | null} swapped coordinates: (1) [lng, lat] coordinates - (2) [lat, lng] coordinates
    */
-  latlngswap(coordinates) {
+  static latlngswap(coordinates) {
     if (coordinates && coordinates.length > 1) {
       return [coordinates[1], coordinates[0]];
-    } else {
-      return null;
     }
+    return null;
   }
 }
 

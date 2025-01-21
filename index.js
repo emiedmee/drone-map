@@ -1440,10 +1440,7 @@ notamActiveGeozoneLayer.on("remove", (event) => {
  * Parse the NOTAMS response after getting the data from the API.
  */
 async function parseNotams() {
-  if (notamProcessor && notamProcessor.notams && notamProcessor.geozones) {
-    notamProcessor.geozonesActiveByNotams = await notamProcessor.getGeozonesActiveByNotams(notamProcessor.notams);
-    notamProcessor.geozonesDefinedByNotams = await notamProcessor.getGeozonesDefinedByNotams(notamProcessor.notams);
-
+  if (await notamProcessor.parseNotams()) {
     // Always do both to sync notamNewGeozoneLayer to notamActiveGeozoneLayer
     notamActiveGeozoneLayer.addData(notamProcessor.geozones);
     notamNewGeozoneLayer.addData(notamProcessor.geozonesDefinedByNotams);
