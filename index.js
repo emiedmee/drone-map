@@ -11,15 +11,6 @@ const RAILWAY_URL = "https://opendata.infrabel.be/api/explore/v2.1/catalog/datas
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
-const GEO_API_HEIGHT_VL_URL = "https://geo.api.vlaanderen.be/DHMV/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&feature_count=50&layers=DHMVII_DTM_1m&query_layers=DHMVII_DTM_1m&" + encode("crs", "EPSG:31370") + "&" + encode("info_format", "application/geo+json");
-const GEO_API_HEIGHT_WA_URL = "https://geoservices.wallonie.be/arcgis/rest/services/RELIEF/WALLONIE_MNS_2021_2022/MapServer/identify?f=json&tolerance=1&sr=31370&layers=top&geometryType=esriGeometryPoint&returnGeometry=false&returnFieldName=false&returnUnformattedValues=false";
-
-const GEO_API_HEIGHT_VL_BBOX = { N: 51.51, E: 5.92, S: 50.68, W: 2.54 };
-const GEO_API_HEIGHT_WA_BBOX = { N: 50.85, E: 6.50, S: 49.45, W: 2.75 };
-const GEO_API_OFFSET = 25;
-const WGS84 = "+proj=longlat +datum=WGS84 +no_defs +type=crs";
-const BD72 = "+proj=lcc +lat_0=90 +lon_0=4.36748666666667 +lat_1=51.1666672333333 +lat_2=49.8333339 +x_0=150000.013 +y_0=5400088.438 +ellps=intl +towgs84=-106.8686,52.2978,-103.7239,0.3366,-0.457,1.8422,-1.2747 +units=m +no_defs +type=crs";
-
 // Cache time in: hours
 const NOTAM_DATASET_NAME = "notams";
 const NOTAM_CACHE_TIME = 6; // 6 hours
@@ -377,44 +368,6 @@ function fl2ft(fl) {
  */
 function ft2fl(ft) {
   return ft / 100;
-}
-
-/**
- * Convert `BD72`/`EPSG:31370` coordinates to `WGS84`/`EPSG:4326` using GeoAPI from Vlaanderen.be.
- * 
- * @param {Object} bd72 
- * @param {Number} bd72.x Easting or x
- * @param {Number} bd72.y Northing or y
- */
-function BD72toWGS84(bd72) {
-  if (bd72 && bd72.x && bd72.y) {
-    const wgs84 = proj4(BD72, WGS84, [bd72.x, bd72.y]);
-    return {
-      lat: parseFloat(wgs84[1]),
-      lng: parseFloat(wgs84[0]),
-    };
-  } else {
-    return;
-  }
-}
-
-/**
- * Convert `WGS84`/`EPSG:4326` coordinates to `BD72`/`EPSG:31370` using GeoAPI from Vlaanderen.be.
- * 
- * @param {Object} wgs84 
- * @param {Number} wgs84.lat Latitude
- * @param {Number} wgs84.lng Longitude
- */
-function WGS84toBD72(wgs84) {
-  if (wgs84 && wgs84.lat && wgs84.lng) {
-    const bd72 = proj4(WGS84, BD72, [wgs84.lng, wgs84.lat]);
-    return {
-      x: parseFloat(bd72[0]),
-      y: parseFloat(bd72[1]),
-    };
-  } else {
-    return;
-  }
 }
 
 /**
@@ -812,7 +765,7 @@ function onEachGeozone(feature, layer) {
         + '<div class="separator"></div>'
         + "Surface height: ---"
       );
-      getHeight(e.latlng).then(height => {
+      surfaceHeightManager.getHeight(e.latlng).then(height => {
         if (height) {
           e.sourceTarget.setPopupContent(baseContent
             + '<div class="separator"></div>'
@@ -944,7 +897,7 @@ function onEachNotamActiveGeozone(feature, layer) {
         + '<div class="separator"></div>'
         + "Surface height: ---"
       );
-      getHeight(e.latlng).then(height => {
+      surfaceHeightManager.getHeight(e.latlng).then(height => {
         if (height) {
           e.sourceTarget.setPopupContent(baseContent
             + '<div class="separator"></div>'
@@ -1009,7 +962,7 @@ function onEachNotamNewGeozone(feature, layer) {
         + '<div class="separator"></div>'
         + "Surface height: ---"
       );
-      getHeight(e.latlng).then(height => {
+      surfaceHeightManager.getHeight(e.latlng).then(height => {
         if (height) {
           e.sourceTarget.setPopupContent(baseContent
             + '<div class="separator"></div>'
@@ -1383,16 +1336,8 @@ function styleOverlayCheckboxes() {
 }
 
 // Show surface height of the location when clicking on the map
-map.on("click", e => {
-  if (e.latlng) {
-    const popup = L.popup().setLatLng(e.latlng).setContent("Surface height: ---").openOn(map);
-    getHeight(e.latlng).then(height => {
-      if (height) {
-        popup.setContent(`Surface height: ${Math.round(height * 100) / 100} m`);
-      }
-    });
-  }
-});
+const surfaceHeightManager = new SurfaceHeightManager(map);
+surfaceHeightManager.register();
 
 // Add EventForwarder to forward events that would otherwise be blocked/stopped by top Canvas layer
 const eventForwarder = new L.eventForwarder({
@@ -2122,117 +2067,3 @@ datasetsDB.addJob({
 });
 
 
-/*
- ***********************************
- *         SURFACE HEIGHT          *
- ***********************************
- */
-
-/**
- * Check if a position is inside a bounding box.
- * 
- * @param {Object} latlng Position
- * @param {Number} latlng.lat Latitude
- * @param {Number} latlng.lng Longitude
- * @param {Object} bbox Bounding box
- * @param {Number} bbox.N Max latitude
- * @param {Number} bbox.E Max longitude
- * @param {Number} bbox.S Min latitude
- * @param {Number} bbox.W Min longitude
- */
-function isLatLngInsideBbox(latlng, bbox) {
-  return bbox.S <= latlng.lat && latlng.lat <= bbox.N
-    && bbox.W <= latlng.lng && latlng.lng <= bbox.E;
-}
-
-/**
- * Try to get the surface height of a position using geo services from Flanders.
- * 
- * @param {Array<Number>} bbox_bd72 BD72 coordinates of the bbox in BD72 coordinates in order: xmin, ymin, xmax, ymax
- * @returns Surface height in meters if available
- */
-async function getHeightVL(bbox_bd72) {
-  const url = `${GEO_API_HEIGHT_VL_URL}&${encode("bbox", bbox_bd72.join(","))}&width=${2 * GEO_API_OFFSET}&height=${2 * GEO_API_OFFSET}&i=${GEO_API_OFFSET}&j=${GEO_API_OFFSET}`;
-  const response = await (await fetch(url)).json();
-
-  const height = response?.features?.at(0)?.properties["Pixel Value"];
-  if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
-    return undefined;
-  } else {
-    return parseFloat(height);
-  }
-}
-
-/**
- * Try to get the surface height of a position using geo services from Wallonia.
- * 
- * @param {Object} pos_bd72 BD72 coordinates of the clicked position
- * @param {Number} pos_bd72.x Easting or x
- * @param {Number} pos_bd72.y Northing or y
- * @param {Array<Number>} bbox_bd72 BD72 coordinates of the bbox in BD72 coordinates, in order: xmin, ymin, xmax, ymax
- * @returns Surface height in meters if available
- */
-async function getHeightWA(pos_bd72, bbox_bd72) {
-  const url = `${GEO_API_HEIGHT_WA_URL}&${encode("imageDisplay", `${2 * GEO_API_OFFSET},${2 * GEO_API_OFFSET},96`)}&${encode("geometry", `{"x":${pos_bd72.x},"y":${pos_bd72.y}}`)}&${encode("mapExtent", bbox_bd72.join(","))}`;
-  const response = await (await fetch(url)).json();
-
-  const height = response?.results?.at(0)?.attributes["Stretch.Pixel Value"];
-  if (!height || height == undefined || height == "NoData" || parseFloat(height) === NaN) {
-    return undefined;
-  } else {
-    return parseFloat(height);
-  }
-}
-
-/**
- * Get the surface height at a given position.
- * 
- * @param {Object} mapLatLng Position in WGS84 coordinates
- * @param {Number} mapLatLng.lat Latitude
- * @param {Number} mapLatLng.lng Longitude
- * @returns Surface height in meters
- */
-async function getHeight(mapLatLng) {
-  const location_cp = map.latLngToContainerPoint(mapLatLng);
-
-  const ne_cp = {
-    x: location_cp.x + GEO_API_OFFSET,
-    y: location_cp.y - GEO_API_OFFSET,
-  };
-  const sw_cp = {
-    x: location_cp.x - GEO_API_OFFSET,
-    y: location_cp.y + GEO_API_OFFSET,
-  };
-
-  // const view = {
-  //   x: Math.abs(ne_cp.x - sw_cp.x), // 2 x Offset
-  //   y: Math.abs(ne_cp.y - sw_cp.y), // 2 x Offset
-  // };
-  // const position = {
-  //   x: view.x / 2, // Offset
-  //   y: view.y / 2, // Offset
-  // };
-
-  const ne_bd72 = WGS84toBD72(map.containerPointToLatLng(ne_cp));
-  const sw_bd72 = WGS84toBD72(map.containerPointToLatLng(sw_cp));
-
-  const bbox_bd72 = [sw_bd72.x, sw_bd72.y, ne_bd72.x, ne_bd72.y]; // <xmin>, <ymin>, <xmax>, <ymax>
-  const pos_bd72 = WGS84toBD72(mapLatLng);
-
-  // Only send request if location is in that part of the country
-  var heightVL = undefined;
-  var heightWA = undefined;
-  if (isLatLngInsideBbox(mapLatLng, GEO_API_HEIGHT_VL_BBOX)) {
-    heightVL = await getHeightVL(bbox_bd72);
-  }
-  if (isLatLngInsideBbox(mapLatLng, GEO_API_HEIGHT_WA_BBOX)) {
-    heightWA = await getHeightWA(pos_bd72, bbox_bd72);
-  }
-
-  if (heightVL !== undefined) {
-    return heightVL;
-  } else if (heightWA !== undefined) {
-    return heightWA;
-  }
-  return undefined;
-}
