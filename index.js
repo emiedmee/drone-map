@@ -1438,6 +1438,9 @@ function styleOverlayCheckboxes() {
       case "Obstacles":
         child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #555555;");
         break;
+      case "Population density":
+        child.childNodes[0].childNodes[0].setAttribute("style", "accent-color: #756bb1;");
+        break;
       default:
         break;
     }
