@@ -865,8 +865,7 @@ L.DrawingInfoControl = L.Control.extend({
   },
 
   onAdd: function (map) {
-    var container = L.DomUtil.create("div", "control-drawing-info leaflet-bar");
-    L.DomEvent.disableClickPropagation(container);
+    var container = L.DomUtil.create("div", "control-drawing-info info");
 
     this.infoContentShow = "";
     this.infoContentShow = "<b>Drawing information:</b>";

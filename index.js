@@ -485,6 +485,7 @@ const styleObstacle = {
 };
 const stylePopulationDensityBase = {
   fill: true,
+  fillColor: "#f2f0f7", // #f2f0f7
   fillOpacity: 0.5,
 
   stroke: true,
@@ -1181,42 +1182,23 @@ function pointToLayerObstacle(point, latlng) {
 
 // Functions to render Population density features
 /* filterPopulationDensity(feature) */
+function getColor(density) {
+  if (density > 5000) return "#54278f";
+  if (density > 2000) return "#756bb1";
+  if (density > 1000) return "#9e9ac8";
+  if (density > 250) return "#cbc9e2";
+  if (density > 1) return "#f2f0f7";
+  return "#ffffff";
+}
 /**
  * @param {Feature} feature
  */
 function stylePopulationDensity(feature) {
   if (feature.properties) {
-    if (feature.properties.pop_dens > 5000) {
-      // > 5000
-      return Object.assign({}, stylePopulationDensityBase, {
-        fillColor: "#54278f", // #54278f
-      });
-    } else if (feature.properties.pop_dens > 2000) {
-      // 2000 - 5000
-      return Object.assign({}, stylePopulationDensityBase, {
-        fillColor: "#756bb1", // #756bb1
-      });
-    } else if (feature.properties.pop_dens > 1000) {
-      // 1000 - 2000
-      return Object.assign({}, stylePopulationDensityBase, {
-        fillColor: "#9e9ac8", // #9e9ac8
-      });
-    } else if (feature.properties.pop_dens > 250) {
-      // 250 - 1000
-      return Object.assign({}, stylePopulationDensityBase, {
-        fillColor: "#cbc9e2", // #cbc9e2
-      });
-    } else if (feature.properties.pop_dens > 1) {
-      // 1 - 250
-      return Object.assign({}, stylePopulationDensityBase, {
-        fillColor: "#f2f0f7", // #f2f0f7
-      });
-    } else {
-      // < 1
-      return Object.assign({}, stylePopulationDensityBase, {
-        fill: false,
-      });
-    }
+    return Object.assign({}, stylePopulationDensityBase, {
+      fill: (feature.properties.pop_dens > 1),
+      fillColor: getColor(feature.properties.pop_dens),
+    });
   }
 }
 /**
@@ -1447,9 +1429,21 @@ function styleOverlayCheckboxes() {
   });
 }
 
+
+/*
+ ***********************************
+ *        CUSTOM MAP THINGS        *
+ ***********************************
+ */
+
+/* Surface height */
+
 // Show surface height of the location when clicking on the map
 const surfaceHeightManager = new SurfaceHeightManager(map);
 surfaceHeightManager.register();
+
+
+/* Event forwarder */
 
 // Add EventForwarder to forward events that would otherwise be blocked/stopped by top Canvas layer
 const eventForwarder = new L.eventForwarder({
@@ -1466,11 +1460,7 @@ const eventForwarder = new L.eventForwarder({
 eventForwarder.enable();
 
 
-/*
- ***********************************
- *             NOTAMS              *
- ***********************************
- */
+/* NOTAMS */
 
 // Create instance of NotamProcessor to handle NOTAM messages
 const notamProcessor = new NotamProcessor();
@@ -1483,7 +1473,7 @@ const notamFutureControl = L.control.notamFuture({
   newGeozonesLayer: notamNewGeozoneLayer,
 }).addTo(map);
 
-// Sync notamGeozoneLayer to geozoneOverrideLayer
+// Sync notamGeozoneLayer to geozoneOverrideLayer and hide/show NotamFutureControl when layer is hidden/shown
 notamActiveGeozoneLayer.on("add", (event) => {
   notamNewGeozoneLayer.addTo(map);
   notamFutureControl.addTo(map);
@@ -1503,6 +1493,38 @@ async function parseNotams() {
     notamNewGeozoneLayer.addData(notamProcessor.geozonesDefinedByNotams);
   }
 }
+
+
+/* Population density */
+
+// Leaflet Control for a legend for the population density layer
+L.Control.PopulationDensityLegend = L.Control.extend({
+  options: {
+    position: "bottomright",
+  },
+
+  onAdd: function (map) {
+    var div = L.DomUtil.create('div', 'control-population-density-legend info');
+    var grades = [1, 250, 1000, 2000, 5000];
+    var labels = [];
+
+    // Loop through our density intervals and generate a label with a colored square for each interval
+    for (var i = -1; i < grades.length; i++) {
+      var from = grades[i];
+      var to = grades[i + 1];
+
+      labels.push(`<i style="background: ${getColor(from + 1)};"></i> ${from ? from : '<'}${(from && to) ? "&ndash;" : ""}${to ? to : '+'}`);
+    }
+    div.innerHTML = labels.join('<br>');
+    return div;
+  },
+});
+
+const populationDensityLegend = new L.Control.PopulationDensityLegend();
+
+// Hide/show PopulationDensityLegend when population density layer is hidden/shown
+populationDensityLayer.on("add", (event) => populationDensityLegend.addTo(map));
+populationDensityLayer.on("remove", (event) => populationDensityLegend.remove(map));
 
 
 /*
