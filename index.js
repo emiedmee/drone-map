@@ -486,7 +486,7 @@ const styleObstacle = {
 const stylePopulationDensityBase = {
   fill: true,
   fillColor: "#f2f0f7", // #f2f0f7
-  fillOpacity: 0.5,
+  fillOpacity: 0.8,
 
   stroke: true,
   color: "#6e6e6e", // #6e6e6e
