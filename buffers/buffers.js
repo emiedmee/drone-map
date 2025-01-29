@@ -36,47 +36,57 @@
  * When converting back to Leaflet, it will stay a polygon, but this is fine.
  */
 
+const DEFAULT_fileName = "flight plan";
+const DEFAULT_fileType = "kml";
+const DEFAULT_extendToGround = true;
+const DEFAULT_heightReference = "relativeToGround";
+const DEFAULT_heightFlight = 60;
+const DEFAULT_heightContingency = 90;
+const DEFAULT_heightBuffer = 120;
+const DEFAULT_widthContingency = 50;
+const DEFAULT_widthBuffer = 50;
+
 const SETTINGS = {
   /**
    * Name of file when exporting.
    * @type {String}
    */
-  fileName: "flight plan",
+  fileName: DEFAULT_fileName,
 
   /**
    * File type to export.
    * @type {"kml" | "kmz"}
    */
-  fileType: "kml",
+  fileType: DEFAULT_fileType,
 
   // When converting to KML
   /**
    * Extend outline-fill to be drawn to the ground or not.
    * @type {Boolean}
    */
-  extendToGround: true,
+  extendToGround: DEFAULT_extendToGround,
   /**
    * Reference of height values
    * @type {"absolute" | "relativeToGround" | "relativeToSeaFloor"}
    */
-  heightReference: "relativeToGround",
+  heightReference: DEFAULT_heightReference,
 
   // When converting to GeoJson
   /**
    * Height of the flight zone (meters).
    * @type {Number}
    */
-  heightFlight: 60,
+  heightFlight: DEFAULT_heightFlight,
   /**
    * Height of the contingency zone (meters).
    * @type {Number}
    */
-  heightContingency: 90,
+  heightContingency: DEFAULT_heightContingency,
   /**
    * Height of the buffer zone (meters).
    * @type {Number}
    */
-  heightBuffer: 120,
+  heightBuffer: DEFAULT_heightBuffer,
 
   // When drawing
   /**
@@ -85,15 +95,16 @@ const SETTINGS = {
    * @example radiusContingencyZone = radiusFlightZone + widthContingency // For a Circle
    * @type {Number}
    */
-  widthContingency: 50,
+  widthContingency: DEFAULT_widthContingency,
   /**
    * Width of the buffer zone (meters).
    * The distance from the edge of the contingency zone to the edge of the buffer zone.
-   * @example radiusBufferZone = radiusFlightZone + widthContingency + widthBuffer
+   * @example radiusBufferZone = radiusFlightZone + widthContingency + widthBuffer // For a Circle
    * @type {Number}
    */
-  widthBuffer: 50,
+  widthBuffer: DEFAULT_widthBuffer,
 };
+
 
 /*
  ***********************************
@@ -593,7 +604,7 @@ L.Circle.include({
  */
 
 // Basic drawing controls
-L.EditControl = L.Control.extend({
+L.Control.EditControl = L.Control.extend({
   options: {
     position: "topleft",
     callback: null,
@@ -622,36 +633,36 @@ L.EditControl = L.Control.extend({
   },
 });
 
-L.NewLineControl = L.EditControl.extend({
+L.Control.NewLineControl = L.Control.EditControl.extend({
   options: {
     position: "topleft",
     callback: map.editTools.startPolyline,
     kind: "line",
-    html: "\\/\\",
+    html: '<img src="../img/vector-line.svg" alt="Line">',
   },
 });
 
-L.NewCircleControl = L.EditControl.extend({
+L.Control.NewCircleControl = L.Control.EditControl.extend({
   options: {
     position: "topleft",
     callback: map.editTools.startCircle,
     kind: "circle",
-    html: "⬤",
+    html: '<img src="../img/vector-circle.svg" alt="Circle">',
   },
 });
 
-L.NewPolygonControl = L.EditControl.extend({
+L.Control.NewPolygonControl = L.Control.EditControl.extend({
   options: {
     position: "topleft",
     callback: map.editTools.startPolygon,
     kind: "polygon",
-    html: "▰",
+    html: '<img src="../img/draw-polygon.svg" alt="Polygon">',
   },
 });
 
-map.addControl(new L.NewLineControl());
-map.addControl(new L.NewCircleControl());
-map.addControl(new L.NewPolygonControl());
+map.addControl(new L.Control.NewLineControl());
+map.addControl(new L.Control.NewCircleControl());
+map.addControl(new L.Control.NewPolygonControl());
 
 map.editTools.on("editable:enable", function (event) {
   if (this.currentPolygon) {
@@ -859,7 +870,7 @@ map.on("editable:drawing:click", updateTooltip);
 
 
 // Drawing info box
-L.DrawingInfoControl = L.Control.extend({
+L.Control.DrawingInfoControl = L.Control.extend({
   options: {
     position: "bottomleft",
   },
@@ -901,7 +912,73 @@ L.DrawingInfoControl = L.Control.extend({
   },
 });
 
-map.addControl(new L.DrawingInfoControl({ position: "bottomright" }));
+map.addControl(new L.Control.DrawingInfoControl({ position: "bottomright" }));
+
+
+// Buffer layer visibility control
+L.Control.BuffersVisibilityControl = L.Control.extend({
+  options: {
+    position: "topleft",
+  },
+
+  visible: true,
+
+  initialize: function (options) {
+    L.setOptions(this, options);
+
+    this.flightLayer = (options && options.flightLayer) ? options.flightLayer : flightZoneLayer;
+    this.contingencyLayer = (options && options.contingencyLayer) ? options.contingencyLayer : contingencyZoneLayer;
+    this.bufferLayer = (options && options.bufferLayer) ? options.bufferLayer : bufferZoneLayer;
+  },
+
+  onAdd: function (map) {
+    var container = L.DomUtil.create("div", "control-buffers-visibility leaflet-bar");
+    L.DomEvent.disableClickPropagation(container);
+
+    this.link = L.DomUtil.create("a", "", container);
+    this.link.href = "#";
+    this.link.title = "Hide buffer layers";
+
+    this.img = L.DomUtil.create("img", "", this.link);
+    this.img.src = "../img/eye.svg";
+    this.img.alt = "Hide";
+
+    L.DomEvent.on(this.link, "click", function (event) {
+      L.DomEvent.stop(event);
+
+      if (this.visible) {
+        // Hide buffer layers
+        this.contingencyLayer.removeFrom(map);
+        this.bufferLayer.removeFrom(map);
+
+        this.link.title = "Show buffer layers";
+        this.img.src = "../img/eye-slash.svg";
+        this.img.alt = "Show";
+      } else {
+        // Show buffer layers
+        this.contingencyLayer.addTo(map);
+        this.bufferLayer.addTo(map);
+
+        this.bufferLayer.bringToFront();
+        this.contingencyLayer.bringToFront();
+        this.flightLayer.bringToFront();
+
+        this.link.title = "Hide buffer layers";
+        this.img.src = "../img/eye.svg";
+        this.img.alt = "Hide";
+      }
+      this.visible = !this.visible;
+    }, this);
+
+    return container;
+  },
+});
+
+map.addControl(new L.Control.BuffersVisibilityControl({
+  flightLayer: flightZoneLayer,
+  contingencyLayer: contingencyZoneLayer,
+  bufferLayer: bufferZoneLayer,
+}));
 
 
 /*
@@ -983,7 +1060,7 @@ function isCoordsArray(array) {
  * @returns {L.Polygon | L.Circle | null} Offset shape
  */
 function createBuffer(layer, offset_m) {
-  if (!offset_m || !layer || !(layer instanceof L.Polyline || layer instanceof L.Circle)) {
+  if (!layer || !(layer instanceof L.Polyline || layer instanceof L.Circle)) {
     console.warn("Provided shape is not a rectangle, polygon, polyline or circle");
     return null;
   }
@@ -1012,9 +1089,14 @@ function createBuffer(layer, offset_m) {
  * @returns {L.Polygon | null} Offset poly shape
  */
 function createBufferPoly(layer, offset_m) {
-  if (!offset_m || !layer || !(layer instanceof L.Polyline)) {
+  if (!layer || !(layer instanceof L.Polyline)) {
     console.warn("Provided shape is not a rectangle, polygon or polyline");
     return null;
+  }
+
+  if (typeof offset_m !== "number" || offset_m <= 0) {
+    console.warn("Invalid buffer offset, defaulting to 0.001");
+    offset_m = 0.001;
   }
 
   // B1. Include library
@@ -1104,9 +1186,14 @@ function createBufferPoly(layer, offset_m) {
  * @returns {L.Circle | null} Offset circle
  */
 function createBufferCircle(layer, offset_m) {
-  if (!offset_m || !layer || !(layer instanceof L.Circle)) {
+  if (!layer || !(layer instanceof L.Circle)) {
     console.warn("Provided shape is not a circle");
     return null;
+  }
+
+  if (typeof offset_m !== "number" || offset_m <= 0) {
+    console.warn("Invalid buffer offset, defaulting to 0.001");
+    offset_m = 0.001;
   }
 
   var center = layer.getLatLng();
@@ -1390,6 +1477,7 @@ function getTagFromKml(kml, tagName) {
       return `<${tagName}>${content}</${tagName}>`;
     }
   }
+  return null;
 }
 
 /**
@@ -1570,7 +1658,7 @@ function exportToKML(documentName = "", documentDescription = "") {
  ***********************************
  */
 
-L.SettingsSidebarControl = L.Control.extend({
+L.Control.SettingsSidebarControl = L.Control.extend({
   options: {
     position: "topright",
   },
@@ -1613,7 +1701,7 @@ L.SettingsSidebarControl = L.Control.extend({
   },
 });
 
-const settingsSidebarControl = new L.SettingsSidebarControl();
+const settingsSidebarControl = new L.Control.SettingsSidebarControl();
 map.addControl(settingsSidebarControl);
 
 // Sidebar close button
@@ -1648,7 +1736,7 @@ const extendToGround = document.getElementById("extendToGround");
 const exportBtn = document.getElementById("exportButton");
 
 /**
- * Set export form content based on `SETTINGS`.
+ * Set export form content based on the `SETTINGS`.
  */
 function updateExportForm() {
   filename.value = SETTINGS.fileName;
@@ -1686,14 +1774,7 @@ async function exportToFile() {
   }
   var file = new Blob([kml], { type: "application/vnd.google-earth.kml+xml" });
 
-  if (SETTINGS.fileType === "kml") {
-    // Create ObjectURL and click it to download the KML file
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(file);
-    a.download = SETTINGS.fileName + "." + SETTINGS.fileType;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  } else { // SETTINGS.fileType === "kmz"
+  if (SETTINGS.fileType === "kmz") {
     // Zip KML and create KMZ file
     var zipWrite = new zip.ZipWriter(new zip.BlobWriter("application/vnd.google-earth.kmz"));
     await zipWrite.add("doc.kml", new zip.TextReader(kml));
@@ -1702,6 +1783,13 @@ async function exportToFile() {
     // Create ObjectURL and click it to download the KMZ file
     var a = document.createElement("a");
     a.href = URL.createObjectURL(zipFile);
+    a.download = SETTINGS.fileName + "." + SETTINGS.fileType;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } else { // SETTINGS.fileType === "kml"
+    // Create ObjectURL and click it to download the KML file
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
     a.download = SETTINGS.fileName + "." + SETTINGS.fileType;
     a.click();
     URL.revokeObjectURL(a.href);

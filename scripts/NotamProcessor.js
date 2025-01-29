@@ -614,7 +614,7 @@ L.Control.NotamFuture = L.Control.extend({
       this._newGeozonesLayer = options.newGeozonesLayer;
 
     } else {
-      console.warn("L.Control.NotamFuture: One or more required options are missing")
+      console.warn("L.Control.NotamFuture: One or more required options are missing");
     }
 
     L.setOptions(this, options);

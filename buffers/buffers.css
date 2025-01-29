@@ -46,8 +46,8 @@ main {
   z-index: 1000;
 }
 
-.control-settings-sidebar a img {
-  margin: 6px;
+.leaflet-control a img {
+  margin: 5px;
 }
 
 .separator {
