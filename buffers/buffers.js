@@ -1819,8 +1819,9 @@ function updateSettingsAfterFileImport(fileName, fileType, flightDocument, conti
   SETTINGS.heightFlight = DEFAULT_heightFlight;
   const heightFlight = getFirstTag(flightDocument, "coordinates");
   if (heightFlight) {
-    const coords = heightFlight.innerHTML;
-    const coord = coords.split(" ")[0];
+    const coords = heightFlight.innerHTML.replaceAll("\r", "").replaceAll("\n", "").trim();
+    const _coord = coords.split(" ");
+    const coord = _coord.filter(el => !!el)[0];
     const alt = parseFloat(coord.split(",")[2]);
     if (alt) {
       SETTINGS.heightFlight = alt;
@@ -1833,9 +1834,10 @@ function updateSettingsAfterFileImport(fileName, fileType, flightDocument, conti
     // heightContingency
     const heightContingency = getFirstTag(contingencyDocument, "coordinates");
     if (heightContingency) {
-      const coords = heightContingency.innerHTML;
-      const coord = coords.split(" ")[0];
-      const alt = parseFloat(coord.split(",")[2]);
+      const coords = heightContingency.innerHTML.replaceAll("\r", "").replaceAll("\n", "").trim();
+      const _coord = coords.split(" ");
+      const coord = _coord.filter(el => !!el)[0];
+        const alt = parseFloat(coord.split(",")[2]);
       if (alt) {
         SETTINGS.heightContingency = alt;
       }
@@ -1844,7 +1846,7 @@ function updateSettingsAfterFileImport(fileName, fileType, flightDocument, conti
     // widthContingency
     const offsetTag = getExtendedDataTag(contingencyDocument, "name", "offset");
     if (offsetTag) {
-      const val = parseFloat(offsetTag.nodeValue);
+      const val = parseFloat(offsetTag.firstElementChild.innerHTML);
       if (val) {
         SETTINGS.widthContingency = val;
       }
@@ -1857,8 +1859,9 @@ function updateSettingsAfterFileImport(fileName, fileType, flightDocument, conti
     // heightBuffer
     const heightBuffer = getFirstTag(bufferDocument, "coordinates");
     if (heightBuffer) {
-      const coords = heightBuffer.innerHTML;
-      const coord = coords.split(" ")[0];
+      const coords = heightBuffer.innerHTML.replaceAll("\r", "").replaceAll("\n", "").trim();
+      const _coord = coords.split(" ");
+      const coord = _coord.filter(el => !!el)[0];
       const alt = parseFloat(coord.split(",")[2]);
       if (alt) {
         SETTINGS.heightBuffer = alt;
@@ -1868,7 +1871,7 @@ function updateSettingsAfterFileImport(fileName, fileType, flightDocument, conti
     // widthBuffer
     const offsetTag = getExtendedDataTag(bufferDocument, "name", "offset");
     if (offsetTag) {
-      const val = parseFloat(offsetTag.nodeValue);
+      const val = parseFloat(offsetTag.firstElementChild.innerHTML);
       if (val) {
         SETTINGS.widthBuffer = val;
       }
