@@ -2227,7 +2227,7 @@ async function handleFileUpload(fileList) {
   const ext = file.name.slice(idxLastDot);
   const fileName = file.name.replace(ext, "");
 
-  if (file.type === "application/vnd.google-earth.kml+xml") {
+  if (file.type === "application/vnd.google-earth.kml+xml" || ext.includes("kml")) {
     // KML
     const fileReader = new FileReader();
     fileReader.addEventListener("load", (event) => {
@@ -2238,7 +2238,7 @@ async function handleFileUpload(fileList) {
       importKML(fileReader.result, fileName, "kml");
     });
     fileReader.readAsText(file);
-  } else if (file.type === "application/vnd.google-earth.kmz") {
+  } else if (file.type === "application/vnd.google-earth.kmz" || ext.includes("kmz")) {
     // KMZ
     const zipReader = new zip.ZipReader(new zip.BlobReader(file));
     const entries = await zipReader.getEntries();
