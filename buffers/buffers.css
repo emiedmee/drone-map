@@ -96,6 +96,23 @@ main {
   margin: 5px 0;
 }
 
+#importForm,
+#fileSelect {
+  cursor: pointer;
+}
+
+#dropzone {
+  position: relative;
+  padding: 10px 5px;
+  border: 2px dashed lightgray;
+  border-radius: 10px;
+}
+
+#dropzone.dropzone-highlight {
+  background-color: rgba(173, 216, 230, 0.5);
+  border-color: cornflowerblue;
+}
+
 .hidden {
   display: none !important;
 }

@@ -1654,6 +1654,417 @@ function exportToKML(documentName = "", documentDescription = "") {
 
 /*
  ***********************************
+ *           IMPORT KML            *
+ ***********************************
+ */
+
+/**
+ * Get all child nodes of a node that are of the specified tag type.
+ * 
+ * @param {Element} node XML node
+ * @param {String} tagName Tag name
+ * @returns {ChildNode[]}
+ */
+function getChildNodes(node, tagName) {
+  const childNodes = [];
+  if (node && tagName) {
+    tagName = tagName.replaceAll("<", "").replaceAll("/", "").replaceAll(">", "").trim();
+    node.childNodes.forEach(node => {
+      if (node.nodeName === tagName) {
+        childNodes.push(node);
+      }
+    });
+  }
+  return childNodes;
+}
+
+/**
+ * Extract the Documents for the 3 zone layers from the KML file, if possible.
+ * 
+ * @param {XMLDocument} kmlXmlDoc KML file as XML document
+ */
+function getLayerDocuments(kmlXmlDoc) {
+  // Get Document(s) at first/parent level
+  const parentLevelDocuments = getChildNodes(kmlXmlDoc.documentElement, "Document");
+
+  // Get child Documents of the first Document
+  var childLevelDocuments = [];
+  if (parentLevelDocuments.length >= 1) {
+    childLevelDocuments = getChildNodes(parentLevelDocuments[0], "Document");
+  } else {
+    console.warn("Invalid Document structure inside KML file");
+    return null;
+  }
+
+  // Determine the 3 zone layers, if possible
+  var flightDocument, contingencyDocument, bufferDocument;
+  if (childLevelDocuments.length == 3) {
+    // Parent Document contains 3 child Documents, assume they are the 3 zone layers
+    flightDocument = childLevelDocuments[0];
+    contingencyDocument = childLevelDocuments[1];
+    bufferDocument = childLevelDocuments[2];
+  } else if (childLevelDocuments.length == 1) {
+    // Parent Document contains 1 child Document, assume this is the flight zone layer and the others are missing
+    console.warn("Only found one layer, assuming this is the flight zone layer and others are missing");
+    flightDocument = childLevelDocuments[0];
+    contingencyDocument = null;
+    bufferDocument = null;
+  } else if (parentLevelDocuments.length == 3) {
+    // First Parent Document contains no child Documents, but there are 3 parent Documents, assume they are the 3 zone layers
+    flightDocument = parentLevelDocuments[0];
+    contingencyDocument = parentLevelDocuments[1];
+    bufferDocument = parentLevelDocuments[2];
+  } else {
+    // Parent Document contains no child Documents, assume the parent is the flight zone layer and the others are missing
+    console.warn("Only found one layer, assuming this is the flight zone layer and others are missing");
+    flightDocument = parentLevelDocuments[0];
+    contingencyDocument = null;
+    bufferDocument = null;
+  }
+
+  // It is possible to check for the name tag of the Documents in the code above to determine what Document is which zone layer,
+  //  but that would not work for KML files that are created outside of this tool (with Google Earth for example).
+
+  return {
+    flight: flightDocument,
+    contingency: contingencyDocument,
+    buffer: bufferDocument,
+  };
+}
+
+/**
+ * Flatten the XML tree of a node to a list and find the first occurance of a specific tag.
+ * 
+ * @param {Element} node XML node
+ * @param {String} tagName Tag name
+ * @returns {Element | null}
+*/
+function getFirstTag(node, tagName) {
+  if (node && tagName) {
+    tagName = tagName.replaceAll("<", "").replaceAll("/", "").replaceAll(">", "").trim();
+    const all = node.querySelectorAll("*");
+    const first = all.values().find(node => node.nodeName === tagName);
+    if (first) {
+      return first;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get a Data tag from the ExtendedData of the node, if it has that tag.
+ * Has the option to filter on a specific attribute of the tag as well.
+ * 
+ * @example
+ * // With attributeName and attributeValue it will filter as follows
+ * <ExtendedData>
+ *  <Data {attributeName}="{attributeValue}">
+ *    <value>100</value>
+ *  </Data>
+ * </ExtendedData>
+ * @param {Element} node XML node
+ * @param {String} attributeName Name of the attribute to filter on
+ * @param {String} attributeValue Value of the attribute to filter on
+ * @returns {Element | null}
+ */
+function getExtendedDataTag(node, attributeName, attributeValue) {
+  const extendedData = getFirstTag(node, "ExtendedData");
+  if (extendedData && attributeValue && attributeName) {
+    const dataNodes = extendedData.querySelectorAll("Data");
+    const match = dataNodes.values().find(dataNode => {
+      const attr = dataNode.attributes.getNamedItem(attributeName);
+      return (attr && attr.nodeValue === attributeValue);
+    });
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+}
+
+/**
+ * Updates the `SETTINGS` after importing a KML file, based on the file contents.
+ * 
+ * @param {String} fileName File name
+ * @param {"kml" | "kmz"} fileType File type
+ * @param {ChildNode} flightDocument XML Document node for the flight zone layer
+ * @param {ChildNode} contingencyDocument XML Document node for the contingency zone layer
+ * @param {ChildNode} bufferDocument XML Document node for the buffer zone layer
+ */
+function updateSettingsAfterFileImport(fileName, fileType, flightDocument, contingencyDocument, bufferDocument) {
+  SETTINGS.fileName = fileName ? fileName : DEFAULT_fileName;
+  SETTINGS.fileType = (fileType === "kml" || fileType === "kmz") ? fileType : DEFAULT_fileType;
+
+  // extendToGround - extrude
+  SETTINGS.extendToGround = DEFAULT_extendToGround;
+  const extrude = getFirstTag(flightDocument, "extrude");
+  if (extrude) {
+    const val = parseInt(extrude.innerHTML);
+    if (typeof val === "number") {
+      SETTINGS.extendToGround = !!val;
+    }
+  }
+
+  // heightReference - altitudeMode
+  SETTINGS.heightReference = DEFAULT_heightReference;
+  const altitudeMode = getFirstTag(flightDocument, "altitudeMode");
+  if (altitudeMode) {
+    const val = altitudeMode.innerHTML;
+    if (val === "absolute" || val === "relativeToGround" || val === "relativeToSeaFloor") {
+      SETTINGS.heightReference = val;
+    }
+  }
+
+  // heightFlight
+  SETTINGS.heightFlight = DEFAULT_heightFlight;
+  const heightFlight = getFirstTag(flightDocument, "coordinates");
+  if (heightFlight) {
+    const coords = heightFlight.innerHTML;
+    const coord = coords.split(" ")[0];
+    const alt = parseFloat(coord.split(",")[2]);
+    if (alt) {
+      SETTINGS.heightFlight = alt;
+    }
+  }
+
+  SETTINGS.heightContingency = DEFAULT_heightContingency;
+  SETTINGS.widthContingency = DEFAULT_widthContingency;
+  if (contingencyDocument) {
+    // heightContingency
+    const heightContingency = getFirstTag(contingencyDocument, "coordinates");
+    if (heightContingency) {
+      const coords = heightContingency.innerHTML;
+      const coord = coords.split(" ")[0];
+      const alt = parseFloat(coord.split(",")[2]);
+      if (alt) {
+        SETTINGS.heightContingency = alt;
+      }
+    }
+
+    // widthContingency
+    const offsetTag = getExtendedDataTag(contingencyDocument, "name", "offset");
+    if (offsetTag) {
+      const val = parseFloat(offsetTag.nodeValue);
+      if (val) {
+        SETTINGS.widthContingency = val;
+      }
+    }
+  }
+
+  SETTINGS.heightBuffer = DEFAULT_heightBuffer;
+  SETTINGS.widthBuffer = DEFAULT_widthBuffer;
+  if (bufferDocument) {
+    // heightBuffer
+    const heightBuffer = getFirstTag(bufferDocument, "coordinates");
+    if (heightBuffer) {
+      const coords = heightBuffer.innerHTML;
+      const coord = coords.split(" ")[0];
+      const alt = parseFloat(coord.split(",")[2]);
+      if (alt) {
+        SETTINGS.heightBuffer = alt;
+      }
+    }
+
+    // widthBuffer
+    const offsetTag = getExtendedDataTag(bufferDocument, "name", "offset");
+    if (offsetTag) {
+      const val = parseFloat(offsetTag.nodeValue);
+      if (val) {
+        SETTINGS.widthBuffer = val;
+      }
+    }
+  }
+}
+
+/**
+ * Converts a string of KML coordinates to Leaflet LatLngs.
+ * 
+ * @param {String} coords
+ * @returns {L.LatLng | L.LatLng[] | null}
+ */
+function kmlCoordsToLatLng(coords) {
+  if (coords) {
+    coords = coords.replaceAll("\r", "").replaceAll("\n", "").trim();
+    const _coordsArray = coords.split(" ");
+    const coordsArray = _coordsArray.filter(el => !!el);
+    if (coordsArray.length == 1) {
+      const coord = coordsArray[0].split(",");
+      const lng = parseFloat(coord[0]);
+      const lat = parseFloat(coord[1]);
+      const alt = parseFloat(coord[2]);
+      if (lng && lat) {
+        return {
+          lat: lat,
+          lng: lng,
+          alt: alt ? alt : 0,
+        };
+      }
+    } else if (coordsArray.length > 1) {
+      const latlngs = [];
+      coordsArray.forEach(coord => {
+        const latlng = kmlCoordsToLatLng(coord);
+        if (latlng) {
+          latlngs.push(latlng);
+        }
+      });
+      if (latlngs.length) {
+        return latlngs;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Import a Geometry shape to the flight zone layer.
+ * 
+ * @param {Element} shape XML node of the shape
+ */
+function importShape(shape) {
+  if (shape) {
+    if (shape.nodeName === "LineString") {
+      // Line
+      console.debug("Importing line");
+      const coordsTag = getFirstTag(shape, "coordinates");
+      if (coordsTag) {
+        const latlngs = kmlCoordsToLatLng(coordsTag.innerHTML);
+        const polyline = new L.PolylineLinked(latlngs);
+        polyline.addTo(flightZoneLayer);
+      }
+    } else if (shape.nodeName === "Polygon") {
+      // One of Polygon or Circle
+      const centerNode = getExtendedDataTag(shape, "name", "center");
+      const radiusNode = getExtendedDataTag(shape, "name", "radius");
+      if (centerNode && radiusNode) {
+        // Circle
+        console.log("Importing circle");
+        const _center = kmlCoordsToLatLng(centerNode.firstElementChild?.innerHTML ?? "");
+        const _radius = parseFloat(radiusNode.firstElementChild?.innerHTML ?? "1");
+        if (_center && !(_center instanceof Array) && _radius) {
+          const circle = new L.CircleLinked(_center, { radius: _radius });
+          circle.addTo(flightZoneLayer);
+        }
+      } else {
+        // Polygon
+        console.log("Importing polygon");
+        const latlngs = [];
+        const coordsTags = shape.querySelectorAll("coordinates");
+        coordsTags.forEach(coordsTag => {
+          const latlng = kmlCoordsToLatLng(coordsTag.innerHTML);
+          if (latlng) {
+            latlngs.push(latlng);
+          }
+        });
+        const polygon = new L.PolygonLinked(latlngs);
+        polygon.addTo(flightZoneLayer);
+      }
+    }
+    // else: something unexpected, so ignore
+  }
+}
+
+/**
+ * Import a Placemark or a MultiGeometry shape to the flight zone layer.
+ * 
+ * @param {Element} placemark XML node of the Placemark
+ */
+function importPlacemark(placemark) {
+  // Possible Placemark types: Point, LineString, Polygon, MultiGeometry
+  // Possible MultiGeometry types: Point, LineString, Polygon
+  // 
+  // Processing shape in Placemark:
+  //  Point: not used, so ignore
+  //  LineString: convert to Polyline
+  //  Polygon: check if it center and radius in ExtendedData
+  //    yes: (Circle) convert to Circle; using center and radius
+  //    no: (Polygon) convert to Polygon; add every coordinates to array of LatLngs
+  //  MultiGeometry: for all shapes inside
+  //    process them the same way as the shape in a Placemark, but add them as separate shapes
+
+  if (placemark) {
+    // Extract ExtendedData to inject in shape
+    const extendedData = getChildNodes(placemark, "ExtendedData");
+    var extData = null;
+    if (extendedData.length) {
+      extData = extendedData[0];
+    }
+
+    // MultiGeometry
+    const multis = getChildNodes(placemark, "MultiGeometry");
+    if (multis.length) {
+      multis.forEach(el => {
+        if (extData) {
+          // Inject ExtendedData of Placemark so containing shapes have access to it
+          el.appendChild(extData);
+        }
+        importPlacemark(el);
+      });
+      return;
+    }
+
+    // Point - ignore
+
+    // LineString
+    const linestrings = getChildNodes(placemark, "LineString");
+    if (linestrings.length) {
+      linestrings.forEach(el => importShape(el));
+      return;
+    }
+
+    // Polygon
+    const polygons = getChildNodes(placemark, "Polygon");
+    if (polygons.length) {
+      polygons.forEach(el => {
+        if (extData) {
+          // Inject ExtendedData of Placemark in case the polygon is a circle
+          el.appendChild(extData);
+        }
+        importShape(el);
+      });
+      return;
+    }
+  }
+}
+
+/**
+ * Import a KML file by extracting all settings and adding all flight zone shapes to the map.
+ * 
+ * @param {String} kml KML file as a string
+ * @param {String} fileName File name, used for updating the `SETTINGS`
+ * @param {"kml" | "kmz"} fileType File type, used for updating the `SETTINGS`
+ */
+function importKML(kml, fileName, fileType) {
+  // Parse KML to XML document for easier parsing
+  const xmlDoc = (new DOMParser()).parseFromString(kml, "text/xml");
+  if (!xmlDoc || xmlDoc.documentElement.nodeName !== "kml") {
+    console.warn("Invalid XML inside KML file");
+    return;
+  }
+
+  // Get the 3 zone layer Documents
+  const layers = getLayerDocuments(xmlDoc);
+  if (!layers || !layers.flight) {
+    console.warn("Invalid XML inside KML file");
+    return;
+  }
+
+  // Clear the contents of the zone layers
+  flightZoneLayer.clearLayers();
+  contingencyZoneLayer.clearLayers();
+  bufferZoneLayer.clearLayers();
+
+  // Determine all settings or use defaults for missing ones
+  updateSettingsAfterFileImport(fileName, fileType, layers.flight, layers.contingency, layers.buffer);
+  updateExportForm();
+
+  // Add all flight zone shapes to the map, buffer zones will be added automatically
+  const placemarks = getChildNodes(layers.flight, "Placemark");
+  placemarks.forEach(placemark => importPlacemark(placemark));
+}
+
+
+/*
+ ***********************************
  *        SETTINGS SIDEBAR         *
  ***********************************
  */
@@ -1718,7 +2129,9 @@ if (window.screen.width <= 450) {
 }
 
 // Input elements of the import form
-const fileSelect = document.getElementById("fileSelect");
+const body = document.getElementsByTagName("body")[0];
+const importForm = document.getElementById("importForm");
+const dropzone = document.getElementById("dropzone");
 const fileElem = document.getElementById("fileElem");
 
 // Input elements of the export form
@@ -1796,15 +2209,83 @@ async function exportToFile() {
   }
 }
 
+/**
+ * Handle files after files are dropped or after file selection.
+ * 
+ * @param {FileList} fileList
+ */
+async function handleFileUpload(fileList) {
+  if (!fileList.length) {
+    return;
+  }
+
+  // Only allow 1 file (if multiple files supported, then loop over all files in fileList)
+  const file = fileList[0];
+
+  // Get filename without extension
+  const idxLastDot = file.name.lastIndexOf(".");
+  const ext = file.name.slice(idxLastDot);
+  const fileName = file.name.replace(ext, "");
+
+  if (file.type === "application/vnd.google-earth.kml+xml") {
+    // KML
+    const fileReader = new FileReader();
+    fileReader.addEventListener("load", (event) => {
+      if (!fileReader.result) {
+        console.warn("Empty KML file");
+        return;
+      }
+      importKML(fileReader.result, fileName, "kml");
+    });
+    fileReader.readAsText(file);
+  } else if (file.type === "application/vnd.google-earth.kmz") {
+    // KMZ
+    const zipReader = new zip.ZipReader(new zip.BlobReader(file));
+    const entries = await zipReader.getEntries();
+    if (entries.length) {
+      for (var j = 0; j < entries.length; j++) {
+        // KML file inside KMZ
+        const text = await entries[j].getData(new zip.TextWriter());
+        if (!text) {
+          console.warn("Empty KML file \"" + entries[j].filename + "\" inside the KMZ file");
+          return;
+        }
+        importKML(text, fileName, "kmz");
+      }
+    } else {
+      console.warn("No files inside the KMZ file");
+    }
+    await zipReader.close();
+  } else {
+    // Other file types
+    console.warn("Only .kml and .kmz files are supported");
+    alert("Only .kml and .kmz files are supported");
+  }
+}
+
 // Handle interactions with the import form
-fileSelect.addEventListener("click", (event) => {
+fileElem.addEventListener("change", (event) => {
+  handleFileUpload(event.target.files);
+});
+importForm.addEventListener("click", (event) => {
   if (fileElem) {
     fileElem.click();
   }
 });
-fileElem.addEventListener("change", (event) => {
-  console.warn(`Trying to import form file "${event.target.value}", but this functionality is not yet implemented!`);
-  alert("Importing from file is not yet implemented!");
+body.addEventListener("dragenter", (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+  dropzone.classList.add("dropzone-highlight");
+});
+body.addEventListener("dragover", (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+});
+body.addEventListener("drop", (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+  dropzone.classList.remove("dropzone-highlight");
+  handleFileUpload(event.dataTransfer.files);
 });
 
 // Handle interactions with the export form, update the value in `SETTINGS` that was changed in the form

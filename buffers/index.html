@@ -44,16 +44,19 @@
 
     <div class="separator"></div>
 
-    <form id="importForm" class="hidden">
-      <h4>Import</h4>
-      <div>
-        <label for="fileElem">Import from file:</label>
-        <input id="fileElem" type="file" accept=".kml,.kmz">
-        <input id="fileSelect" type="button" value="Select some files">
+    <form id="importForm">
+      <h4>Import from file</h4>
+      <div id="dropzone">
+        <input id="fileElem" type="file" accept=".kml,.kmz" class="hidden">
+        <center>
+          <p>Drag & Drop file here</p>
+          <p>or</p>
+          <input id="fileSelect" type="button" value="Browse files">
+        </center>
       </div>
     </form>
 
-    <div class="separator hidden"></div>
+    <div class="separator"></div>
 
     <form id="exportForm">
       <h4>Export settings</h4>
