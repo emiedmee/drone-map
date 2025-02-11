@@ -3,7 +3,7 @@ const MAX_ZOOM = 19;
 
 const GEOZONE_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_validated_Prod/FeatureServer/0/query?&f=geojson&outFields=*&returnGeometry=true&returnExceededLimitFeatures=true&" + encode("where", "status='validated'") + "&orderByFields=Shape__Area";
 // Shape__Area%2Cname%2Ccode%2ClowerAltitudeUnit%2CupperAltitudeUnit%2ClowerAltitudeReference%2CupperAltitudeReference%2CTimeField%2ClowerLimit%2CupperLimit%2Ccategories%2CwrittenStartTimeGeneral%2CwrittenEndTimeGeneral
-const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?&f=json&outFields=*&returnGeometry=false&returnExceededLimitFeatures=true&" + encode("where", "status='validated' AND last_version='yes'");
+const NOTAM_URL = "https://services3.arcgis.com/om3vWi08kAyoBbj3/ArcGIS/rest/services/Geozone_Notam_View_Prod/FeatureServer/0/query?&f=json&outFields=*&returnGeometry=false&returnExceededLimitFeatures=true&orderByFields=activityStart DESC&" + encode("where", "status='validated' AND last_version='yes'");
 // notamId%2Cfir%2Clocation%2CactivityStart%2CvalidityEnd%2Cschedule%2ClowerLimit%2ClowerLimitUnit%2CupperLimit%2CupperLimitUnit%2ClowerLimitRef%2CupperLimitRef%2CnotamText
 
 // https://statbel.fgov.be/nl/open-data/datalab-grid-van-de-bevolking-met-cellen-van-variabele-grootte
@@ -1546,21 +1546,33 @@ function buildOverpassQuery(filterString) {
 }
 
 async function getNotams() {
-  const response = await (await fetch(NOTAM_URL)).json();
+  var data;
+
+  var res;
+  var offset = 0;
+  do {
+    res = await (await fetch(NOTAM_URL + "&resultOffset=" + offset)).json();
+if (!data) {
+      data = res;
+    } else if (res?.features.length) {
+      offset += res.features.length;
+      data.features = data.features.concat(res.features);
+    }
+  } while (res?.exceededTransferLimit);
 
   // Cache fetched data in IndexedDB
-  if (response) {
+  if (data) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
         name: NOTAM_DATASET_NAME,
         validTimeHours: NOTAM_CACHE_TIME,
-        value: response,
+        value: data,
       },
     });
   }
 
-  return response;
+  return data;
 }
 
 async function getGeozones() {
