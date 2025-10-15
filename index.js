@@ -1537,7 +1537,7 @@ const datasetsDB = new DBDatasets();
 
 // Functions to get datasets
 function buildOverpassQuery(filterString) {
-  const q = "[out:json][maxsize:32Mi][timeout:45];"
+  const q = "[out:json][maxsize:64Mi][timeout:45];"
     + 'area["name"="België / Belgique / Belgien"]->.belgie;'
     + filterString
     + "out geom;";
@@ -1552,7 +1552,7 @@ async function getNotams() {
   var offset = 0;
   do {
     res = await (await fetch(NOTAM_URL + "&resultOffset=" + offset)).json();
-if (!data) {
+    if (!data) {
       data = res;
     } else if (res?.features.length) {
       offset += res.features.length;
