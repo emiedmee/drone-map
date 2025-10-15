@@ -1561,7 +1561,7 @@ async function getNotams() {
   } while (res?.exceededTransferLimit);
 
   // Cache fetched data in IndexedDB
-  if (data) {
+  if (data && data.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1590,7 +1590,7 @@ async function getGeozones() {
   }
 
   // Cache fetched data in IndexedDB
-  if (response) {
+  if (response && response.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1627,7 +1627,7 @@ async function getRailways() {
   }
 
   // Cache fetched data in IndexedDB
-  if (geojson) {
+  if (geojson && geojson.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1653,7 +1653,7 @@ async function getHighVoltageLines() {
   }
 
   // Cache fetched data in IndexedDB
-  if (geojson) {
+  if (geojson && geojson.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1691,7 +1691,7 @@ async function getCellTowers() {
   }
 
   // Cache fetched data in IndexedDB
-  if (geojson) {
+  if (geojson && geojson.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1724,7 +1724,7 @@ async function getWindTurbines() {
   }
 
   // Cache fetched data in IndexedDB
-  if (geojson) {
+  if (geojson && geojson.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1850,7 +1850,7 @@ async function getObstacles() {
   }
 
   // Cache fetched data in IndexedDB
-  if (geojson) {
+  if (geojson && geojson.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1922,7 +1922,7 @@ async function getLocationNames() {
   }
 
   // Cache fetched data in IndexedDB
-  if (geojson) {
+  if (geojson && geojson.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
@@ -1950,7 +1950,7 @@ async function getPopulationDensity() {
   } while (res?.properties?.exceededTransferLimit);
 
   // Cache fetched data in IndexedDB
-  if (data.features.length) {
+  if (data && data.features.length > 0) {
     datasetsDB.addJob({
       type: EJobType.UpdateDataset,
       params: {
